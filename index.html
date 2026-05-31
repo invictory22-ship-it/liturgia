@@ -138,8 +138,8 @@
 <div class="settings" id="settings">
   <div class="settings-row">
     <label>Вікно пошуку:</label>
-    <input type="range" id="window" min="2" max="15" value="5">
-    <span id="windowOut" style="color:#ddd;min-width:18px;">5</span>
+    <input type="range" id="window" min="2" max="15" value="3">
+    <span id="windowOut" style="color:#ddd;min-width:18px;">3</span>
     <span style="color:#555;">слів вперед (менше = менше стрибків)</span>
   </div>
   <div class="settings-row" style="margin-top:12px;">
@@ -158,6 +158,7 @@
 <div class="footer">
   <div class="footer-left">
     <button class="primary" id="btnStart" onclick="toggleListening()">▶ Почати</button>
+    <button onclick="scrollToCurrent()" title="Прокрутити до підсвіченого місця">⤓ До мого місця</button>
     <span class="status" id="status">Готово</span>
   </div>
   <div class="footer-right">
@@ -171,7 +172,7 @@
 let recognition = null, isListening = false;
 let currentIndex = 0;          // index into trackedWords
 let trackedWords = [];         // [{text, normalized, el}]
-let lookAheadWindow = 5;
+let lookAheadWindow = 3;
 let totalProcessedWords = 0;
 let trackDeacon = true;
 
@@ -317,25 +318,38 @@ function wordMatches(h,e){
 }
 
 function advance(heard){
-  if(heard.length < 3) return;            // ігноруємо шум і дуже короткі слова
   const tw = trackedWords;
-  // 1) поточне слово (можна нечітко — відмінок) -> крок на 1
-  if(currentIndex < tw.length &&
-     wordMatches(heard, tw[currentIndex].normalized)){
+  if(currentIndex >= tw.length) return;
+  const cur = tw[currentIndex].normalized;
+  // 1) ПОТОЧНЕ слово — рухаємось рівно на 1. Дозволяємо й короткі слова
+  //    ("і", "ще", "їх"): для них спрацює лише точний збіг (h===e), тож шум
+  //    майже не зашкодить, зате трекер на них більше не застрягає.
+  if(wordMatches(heard, cur)){
     currentIndex++; return;
   }
-  // 2) наступне слово (нечітко) -> дрібний крок уперед (безпечно, лише на 1)
-  if(currentIndex+1 < tw.length &&
-     wordMatches(heard, tw[currentIndex+1].normalized)){
-    currentIndex += 2; return;
+  // 1b) СКЛЕЙКА: Google інколи зливає два слова в одне ("на віки"->"навіки",
+  //     "і євангелиста"->"ієвангелиста"). Якщо почуте = поточне+наступне
+  //     разом — зараховуємо обидва.
+  if(currentIndex+1 < tw.length){
+    const glued = cur + tw[currentIndex+1].normalized;
+    if(heard === glued){ currentIndex += 2; return; }
   }
-  // 3) СТРИБОК далі по вікну — ЛИШЕ за ТОЧНИМ збігом (коли впевнені).
-  //    Це дозволяє наздогнати, якщо пропустив шматок, але не стрибати навмання.
-  const end = Math.min(currentIndex+lookAheadWindow, tw.length);
-  for(let i=currentIndex+2; i<end; i++){
-    if(heard === tw[i].normalized){ currentIndex=i+1; return; }
+  // 2) СТРИБОК уперед по вікну — ЛИШЕ за ТОЧНИМ збігом і лише для довгих
+  //    (>=4 літери) слів. Так трекер доганяє, якщо пропустив шматок, але не
+  //    стрибає навмання на короткому/повторюваному слові й не випереджає.
+  if(heard.length >= 4){
+    const end = Math.min(currentIndex+lookAheadWindow, tw.length);
+    for(let i=currentIndex+1; i<end; i++){
+      if(heard === tw[i].normalized){ currentIndex=i+1; return; }
+    }
   }
   // не знайшли — лишаємось на місці (краще зачекати, ніж стрибнути навмання)
+}
+
+// Прокрутити екран до поточного (підсвіченого) місця.
+function scrollToCurrent(){
+  const cur = trackedWords[currentIndex] && trackedWords[currentIndex].el;
+  if(cur) cur.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
 function processTranscript(t){
@@ -360,7 +374,7 @@ function startListening(){
   };
   recognition.onerror = (e)=>{
     if(e.error==='no-speech'||e.error==='aborted') return;
-    if(e.error==='not-allowed'){ setStatus('Немає доступу до мікрофона — потрібен https (Netlify)', 'error'); isListening=false; resetBtn(); return; }
+    if(e.error==='not-allowed'){ setStatus('Немає доступу до мікрофона. Дозволь мікрофон у браузері й натисни Почати.', 'error'); isListening=false; resetBtn(); return; }
     setStatus('Помилка: '+e.error, 'error');
   };
   recognition.onend = ()=>{ if(isListening){ totalProcessedWords=0; try{recognition.start();}catch(e){} } };
@@ -369,6 +383,7 @@ function startListening(){
     document.getElementById('btnStart').textContent='⏸ Зупинити';
     document.getElementById('btnStart').classList.add('listening');
     setStatus('Слухаю...', 'listening');
+    scrollToCurrent();   // при старті — одразу до підсвіченого місця
   }catch(err){ setStatus('Не вдалося запустити: '+err.message, 'error'); }
 }
 
