@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Літургія Іоана Золотоустого — голосовий служебник</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: #000; color: #e8e8e8;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .topbar {
+    background: #0d0d0d; border-bottom: 1px solid #1f1f1f;
+    padding: 10px 18px; display: flex; justify-content: space-between;
+    align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .topbar h1 { margin: 0; font-size: 13px; font-weight: 500; color: #777; }
+  .topbar-buttons { display: flex; gap: 8px; }
+  button {
+    background: #1a1a1a; color: #ddd; border: 1px solid #2c2c2c;
+    border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;
+    font-family: inherit; transition: background .15s, border-color .15s;
+  }
+  button:hover { background: #252525; border-color: #3a3a3a; }
+  button.primary {
+    background: #c4661a; border-color: #d97a2c; color: #fff; font-weight: 500;
+    padding: 10px 22px; font-size: 14px;
+  }
+  button.primary:hover { background: #d97a2c; }
+  button.primary.listening { background: #1a1a1a; border-color: #c4661a; color: #c4661a; }
+  .settings {
+    background: #080808; border-bottom: 1px solid #1f1f1f;
+    padding: 14px 18px; display: none; flex-shrink: 0;
+  }
+  .settings.open { display: block; }
+  .settings-row {
+    display: flex; align-items: center; gap: 12px; margin-top: 4px;
+    flex-wrap: wrap; font-size: 13px; color: #888;
+  }
+  .settings-row input[type=range] { width: 150px; }
+  .settings-row label { color: #888; }
+  .settings-row input[type=checkbox] { width: 16px; height: 16px; }
+
+  .scroll {
+    flex: 1; overflow-y: auto; scroll-behavior: smooth;
+    padding: 40px 8vw 60vh;
+  }
+
+  /* TITLE */
+  .b-title {
+    text-align: center; color: #b5803a; font-size: 26px; line-height: 1.3;
+    margin: 10px 0 40px; font-weight: 500; white-space: pre-line;
+    letter-spacing: 0.02em;
+  }
+  /* SECTION HEADER */
+  .b-header {
+    text-align: center; color: #8a7a55; font-size: 17px; font-weight: 500;
+    margin: 40px 0 24px; text-transform: uppercase; letter-spacing: 0.08em;
+    position: relative;
+  }
+  .b-header::before, .b-header::after {
+    content: ""; display: inline-block; width: 40px; height: 1px;
+    background: #4a3f2a; vertical-align: middle; margin: 0 14px;
+  }
+  /* STAGE DIRECTION */
+  .b-stage {
+    color: #5a5a5a; font-size: 15px; font-style: italic; line-height: 1.45;
+    margin: 18px 0; padding-left: 16px; border-left: 2px solid #2a2a2a;
+    max-width: 640px;
+  }
+  /* CHOIR */
+  .b-choir {
+    color: #707070; font-size: 17px; font-style: italic; line-height: 1.4;
+    margin: 14px 0; padding-left: 4px;
+  }
+  .b-choir .lbl { color: #555; font-style: normal; font-size: 13px; margin-right: 8px; }
+  /* SPOKEN (tracked) */
+  .b-say { margin: 22px 0; }
+  .b-say .role {
+    display: inline-block; color: #6a6a6a; font-size: 13px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
+  }
+  .b-say .saytext { font-size: 30px; line-height: 1.5; }
+  .word { color: #f0f0f0; transition: color .2s, background-color .2s; cursor: pointer; border-radius: 4px; padding: 0 2px; }
+  .word:hover { background: rgba(255,255,255,.06); }
+  .word.said { color: #444; }
+  .word.paren { color: #6a6a6a; font-size: 0.62em; vertical-align: middle; }
+  .word.current {
+    color: #ff9933; background: rgba(255,153,51,.12);
+    text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 2px;
+  }
+
+  .footer {
+    background: #0d0d0d; border-top: 1px solid #1f1f1f; padding: 10px 18px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    flex-shrink: 0; flex-wrap: wrap;
+  }
+  .footer-left, .footer-right { display: flex; align-items: center; gap: 12px; }
+  .status { color: #888; font-size: 13px; }
+  .status.listening { color: #ff9933; }
+  .status.error { color: #d04040; }
+  .heard { color: #555; font-size: 12px; font-style: italic; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  @media (max-width: 700px) {
+    .scroll { padding: 24px 20px 60vh; }
+    .b-say .saytext { font-size: 24px; }
+    .b-title { font-size: 21px; }
+    .topbar h1 { display: none; }
+  }
+  /* FOLD */
+  .b-fold { margin: 20px auto 20px 0; max-width: 680px; }
+  .b-fold > summary {
+    color: #9a8a5f; font-size: 14px; font-style: italic; cursor: pointer;
+    list-style: none; padding: 9px 14px; border: 1px dashed #3a3320;
+    border-radius: 8px; user-select: none;
+  }
+  .b-fold > summary::-webkit-details-marker { display: none; }
+  .b-fold > summary::before { content: "\25b8 "; color: #6a5f3a; }
+  .b-fold[open] > summary::before { content: "\25be "; }
+  .b-fold > summary:hover { background: #141414; }
+  .b-fold[open] > summary { margin-bottom: 8px; color: #b09560; }
+  .b-fold .b-stage { margin: 10px 0; border-left-color: #3a3320; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Літургія Іоана Золотоустого</h1>
+  <div class="topbar-buttons">
+    <button onclick="toggleSettings()">Налаштування</button>
+    <button onclick="reset()">↺ Спочатку</button>
+  </div>
+</div>
+
+<div class="settings" id="settings">
+  <div class="settings-row">
+    <label>Вікно пошуку:</label>
+    <input type="range" id="window" min="2" max="15" value="5">
+    <span id="windowOut" style="color:#ddd;min-width:18px;">5</span>
+    <span style="color:#555;">слів вперед (менше = менше стрибків)</span>
+  </div>
+  <div class="settings-row" style="margin-top:12px;">
+    <input type="checkbox" id="trackDeacon" checked>
+    <label for="trackDeacon">Я промовляю дияконські частини (служу сам)</label>
+  </div>
+  <div class="settings-row" style="margin-top:8px;">
+    <label>Розмір тексту:</label>
+    <input type="range" id="fontSize" min="20" max="46" value="30">
+    <span id="fontOut" style="color:#ddd;">30</span>
+  </div>
+</div>
+
+<div class="scroll" id="scroll"></div>
+
+<div class="footer">
+  <div class="footer-left">
+    <button class="primary" id="btnStart" onclick="toggleListening()">▶ Почати</button>
+    <span class="status" id="status">Готово</span>
+  </div>
+  <div class="footer-right">
+    <span class="heard" id="heard"></span>
+  </div>
+</div>
+
+<script src="liturgy-data.js"></script>
+<script>
+
+let recognition = null, isListening = false;
+let currentIndex = 0;          // index into trackedWords
+let trackedWords = [];         // [{text, normalized, el}]
+let lookAheadWindow = 5;
+let totalProcessedWords = 0;
+let trackDeacon = true;
+
+function normalize(w){
+  return w.toLowerCase().replace(/[\u2019\u2018\u0027\u0060]/g,"'").replace(/[^\p{L}\u0027]/gu,'').trim();
+}
+
+// Маска дужок: для кожного символу true, якщо він у межах ( ) — разом із дужками.
+// Слова в дужках показуємо дрібним сірим і НЕ трекаємо (це примітки: імена, "(тричі)").
+function parenMask(text){
+  const mask = new Array(text.length).fill(false);
+  let depth = 0;
+  for (let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if (ch === '('){ depth++; mask[i] = true; }
+    else if (ch === ')'){ mask[i] = true; if (depth > 0) depth--; }
+    else if (depth > 0){ mask[i] = true; }
+  }
+  return mask;
+}
+
+function isTracked(block){
+  if (block.t !== 'say') return false;
+  if (block.role === 'Диякон' && !trackDeacon) return false;
+  return true;
+}
+
+function render(){
+  const scroll = document.getElementById('scroll');
+  scroll.innerHTML = '';
+  trackedWords = [];
+
+  for (const block of BLOCKS){
+    if (block.t === 'title'){
+      const d = document.createElement('div');
+      d.className = 'b-title'; d.textContent = block.text;
+      scroll.appendChild(d);
+    } else if (block.t === 'header'){
+      const d = document.createElement('div');
+      d.className = 'b-header'; d.textContent = block.text;
+      scroll.appendChild(d);
+    } else if (block.t === 'stage'){
+      const d = document.createElement('div');
+      d.className = 'b-stage'; d.textContent = block.text;
+      scroll.appendChild(d);
+    } else if (block.t === 'choir'){
+      const d = document.createElement('div');
+      d.className = 'b-choir';
+      const lbl = document.createElement('span');
+      lbl.className = 'lbl'; lbl.textContent = (block.role || 'Хор') + ':';
+      d.appendChild(lbl);
+      d.appendChild(document.createTextNode(block.text));
+      scroll.appendChild(d);
+    } else if (block.t === 'fold'){
+      const det = document.createElement('details');
+      det.className = 'b-fold';
+      if (block.open) det.open = true;
+      const sum = document.createElement('summary');
+      sum.textContent = block.text;
+      det.appendChild(sum);
+      for (const cb of (block.blocks||[])){
+        const c = document.createElement('div');
+        c.className = 'b-stage'; c.textContent = cb.text;
+        det.appendChild(c);
+      }
+      scroll.appendChild(det);
+    } else if (block.t === 'say'){
+      const wrap = document.createElement('div');
+      wrap.className = 'b-say';
+      if (block.role){
+        const r = document.createElement('div');
+        r.className = 'role'; r.textContent = block.role;
+        wrap.appendChild(r);
+      }
+      const txt = document.createElement('div');
+      txt.className = 'saytext';
+      const tracked = isTracked(block);
+      // Позначаємо, які символи тексту стоять у дужках ( ) — їх не трекаємо
+      const inParen = parenMask(block.text);
+      const tokens = block.text.split(/(\s+)/);
+      let offset = 0;
+      for (const tok of tokens){
+        const start = offset; offset += tok.length;
+        if (/^\s+$/.test(tok)){ txt.appendChild(document.createTextNode(tok)); continue; }
+        if (normalize(tok).length === 0){ txt.appendChild(document.createTextNode(tok)); continue; }
+        // чи цей токен (хоч частково) у дужках?
+        let isParen = false;
+        for (let k = start; k < start + tok.length; k++){ if (inParen[k]){ isParen = true; break; } }
+        const span = document.createElement('span');
+        span.className = 'word'; span.textContent = tok;
+        if (tracked && !isParen){
+          const gi = trackedWords.length;
+          span.dataset.gi = gi;
+          span.addEventListener('click', ()=> setPosition(gi));
+          trackedWords.push({ text: tok, normalized: normalize(tok), el: span });
+        } else if (isParen){
+          span.classList.add('paren');
+          span.style.cursor = 'default';
+        } else {
+          span.style.cursor = 'default';
+          span.style.color = '#555';
+        }
+        txt.appendChild(span);
+      }
+      wrap.appendChild(txt);
+      scroll.appendChild(wrap);
+    }
+  }
+  updateHighlight();
+}
+
+function updateHighlight(){
+  for (let i=0;i<trackedWords.length;i++){
+    const el = trackedWords[i].el;
+    el.classList.remove('said','current');
+    if (i < currentIndex) el.classList.add('said');
+    else if (i === currentIndex) el.classList.add('current');
+  }
+  const cur = trackedWords[currentIndex] && trackedWords[currentIndex].el;
+  if (cur) cur.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function setPosition(i){
+  currentIndex = i; totalProcessedWords = 0;
+  if (recognition && isListening){ try{recognition.stop();}catch(e){} }
+  updateHighlight();
+}
+
+function wordMatches(h,e){
+  if(!h||!e) return false;
+  if(h===e) return true;
+  // довжина спільного початку слів
+  const n = Math.min(h.length, e.length);
+  let p = 0; while(p < n && h[p] === e[p]) p++;
+  // короткі слова (<=4) — лише точний збіг (інакше "ми"/"мир"/"мене" плутаються)
+  if(n <= 4) return false;
+  // довші слова — допускаємо різні закінчення (відмінки), але початок має бути
+  // майже однаковий: щонайменше 5 спільних літер і не більше 3 літер різниці.
+  if(p >= 5 && Math.abs(h.length - e.length) <= 3) return true;
+  return false;
+}
+
+function advance(heard){
+  if(heard.length < 3) return;            // ігноруємо шум і дуже короткі слова
+  // 1) якщо поточне слово збіглося — рухаємось рівно на 1 (тримаємо синхрон)
+  if(currentIndex < trackedWords.length &&
+     wordMatches(heard, trackedWords[currentIndex].normalized)){
+    currentIndex++; return;
+  }
+  // 2) інакше шукаємо найближче слово попереду в межах вікна
+  const end = Math.min(currentIndex+lookAheadWindow, trackedWords.length);
+  for(let i=currentIndex+1; i<end; i++){
+    if(wordMatches(heard, trackedWords[i].normalized)){ currentIndex=i+1; return; }
+  }
+  // не знайшли — лишаємось на місці (краще зачекати, ніж стрибнути навмання)
+}
+
+function processTranscript(t){
+  const words = t.trim().split(/\s+/).map(normalize).filter(Boolean);
+  const fresh = words.slice(totalProcessedWords);
+  for(const w of fresh) advance(w);
+  totalProcessedWords = words.length;
+  updateHighlight();
+}
+
+function startListening(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ setStatus('Браузер не підтримує розпізнавання. Chrome або Edge.', 'error'); return; }
+  recognition = new SR();
+  recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'uk-UA';
+  totalProcessedWords = 0;
+  recognition.onresult = (e)=>{
+    let full=''; for(let i=0;i<e.results.length;i++) full += e.results[i][0].transcript+' ';
+    processTranscript(full);
+    const last = e.results[e.results.length-1];
+    document.getElementById('heard').textContent = '"'+last[0].transcript.trim()+'"';
+  };
+  recognition.onerror = (e)=>{
+    if(e.error==='no-speech'||e.error==='aborted') return;
+    if(e.error==='not-allowed'){ setStatus('Немає доступу до мікрофона — потрібен https (Netlify)', 'error'); isListening=false; resetBtn(); return; }
+    setStatus('Помилка: '+e.error, 'error');
+  };
+  recognition.onend = ()=>{ if(isListening){ totalProcessedWords=0; try{recognition.start();}catch(e){} } };
+  try{
+    recognition.start(); isListening=true;
+    document.getElementById('btnStart').textContent='⏸ Зупинити';
+    document.getElementById('btnStart').classList.add('listening');
+    setStatus('Слухаю...', 'listening');
+  }catch(err){ setStatus('Не вдалося запустити: '+err.message, 'error'); }
+}
+
+function stopListening(){
+  isListening=false;
+  if(recognition){ try{recognition.stop();}catch(e){} }
+  resetBtn(); setStatus('Зупинено');
+}
+function resetBtn(){
+  const b=document.getElementById('btnStart');
+  b.textContent='▶ Почати'; b.classList.remove('listening');
+}
+function toggleListening(){ isListening ? stopListening() : startListening(); }
+function reset(){ currentIndex=0; totalProcessedWords=0; updateHighlight(); document.getElementById('heard').textContent=''; }
+function setStatus(m,c){ const s=document.getElementById('status'); s.textContent=m; s.className='status'+(c?' '+c:''); }
+function toggleSettings(){ document.getElementById('settings').classList.toggle('open'); }
+
+document.getElementById('window').addEventListener('input',(e)=>{
+  lookAheadWindow=parseInt(e.target.value); document.getElementById('windowOut').textContent=lookAheadWindow;
+});
+document.getElementById('trackDeacon').addEventListener('change',(e)=>{
+  trackDeacon=e.target.checked; const saved=currentIndex; render(); currentIndex=Math.min(saved,trackedWords.length); updateHighlight();
+});
+document.getElementById('fontSize').addEventListener('input',(e)=>{
+  const v=e.target.value; document.getElementById('fontOut').textContent=v;
+  document.querySelectorAll('.saytext').forEach(el=> el.style.fontSize=v+'px');
+});
+
+render();
+</script>
+</body>
+</html>
