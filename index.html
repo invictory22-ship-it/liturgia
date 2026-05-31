@@ -300,31 +300,40 @@ function setPosition(i){
   updateHighlight();
 }
 
+// Чи це ОДНЕ Й ТЕ САМЕ слово (можливо в іншому відмінку)?
+// Правило: слова мають збігатися майже повністю, відрізняючись лише КОРОТКИМ
+// закінченням. Так "помолимось"/"помолимося" — те саме, а "помилуй"/"помолимось"
+// — РІЗНІ (бо розходяться вже на 4-й літері).
 function wordMatches(h,e){
   if(!h||!e) return false;
   if(h===e) return true;
-  // довжина спільного початку слів
   const n = Math.min(h.length, e.length);
-  let p = 0; while(p < n && h[p] === e[p]) p++;
-  // короткі слова (<=4) — лише точний збіг (інакше "ми"/"мир"/"мене" плутаються)
-  if(n <= 4) return false;
-  // довші слова — допускаємо різні закінчення (відмінки), але початок має бути
-  // майже однаковий: щонайменше 5 спільних літер і не більше 3 літер різниці.
-  if(p >= 5 && Math.abs(h.length - e.length) <= 3) return true;
-  return false;
+  let p = 0; while(p < n && h[p] === e[p]) p++;   // довжина спільного початку
+  if(n <= 4) return false;                         // короткі — лише точний збіг
+  const tailH = h.length - p;                      // що лишилось "хвостом" у кожному
+  const tailE = e.length - p;
+  // спільна основа щонайменше 4 літери, а різні хвости — короткі (закінчення)
+  return p >= 4 && tailH <= 2 && tailE <= 3;
 }
 
 function advance(heard){
   if(heard.length < 3) return;            // ігноруємо шум і дуже короткі слова
-  // 1) якщо поточне слово збіглося — рухаємось рівно на 1 (тримаємо синхрон)
-  if(currentIndex < trackedWords.length &&
-     wordMatches(heard, trackedWords[currentIndex].normalized)){
+  const tw = trackedWords;
+  // 1) поточне слово (можна нечітко — відмінок) -> крок на 1
+  if(currentIndex < tw.length &&
+     wordMatches(heard, tw[currentIndex].normalized)){
     currentIndex++; return;
   }
-  // 2) інакше шукаємо найближче слово попереду в межах вікна
-  const end = Math.min(currentIndex+lookAheadWindow, trackedWords.length);
-  for(let i=currentIndex+1; i<end; i++){
-    if(wordMatches(heard, trackedWords[i].normalized)){ currentIndex=i+1; return; }
+  // 2) наступне слово (нечітко) -> дрібний крок уперед (безпечно, лише на 1)
+  if(currentIndex+1 < tw.length &&
+     wordMatches(heard, tw[currentIndex+1].normalized)){
+    currentIndex += 2; return;
+  }
+  // 3) СТРИБОК далі по вікну — ЛИШЕ за ТОЧНИМ збігом (коли впевнені).
+  //    Це дозволяє наздогнати, якщо пропустив шматок, але не стрибати навмання.
+  const end = Math.min(currentIndex+lookAheadWindow, tw.length);
+  for(let i=currentIndex+2; i<end; i++){
+    if(heard === tw[i].normalized){ currentIndex=i+1; return; }
   }
   // не знайшли — лишаємось на місці (краще зачекати, ніж стрибнути навмання)
 }
