@@ -13,6 +13,5 @@ Thumbs.db
 desktop.ini
 .DS_Store
 
-# Папка deploy збирається з index.html + liturgy-data.js, тримати не обов'язково,
-# але лишаємо в git, щоб мати готову версію під рукою. (Якщо заважатиме — розкоментуй.)
-# deploy/
+# Папка deploy більше не потрібна — Netlify публікує з кореня (див. netlify.toml)
+deploy/
