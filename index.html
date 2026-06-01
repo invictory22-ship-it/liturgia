@@ -146,6 +146,10 @@
     <input type="checkbox" id="trackDeacon" checked>
     <label for="trackDeacon">Я промовляю дияконські частини (служу сам)</label>
   </div>
+  <div class="settings-row" style="margin-top:12px;">
+    <input type="checkbox" id="soloMode">
+    <label for="soloMode">Режим «Служу сам»: ховати дії диякона, мої частини — як Священник</label>
+  </div>
   <div class="settings-row" style="margin-top:8px;">
     <label>Розмір тексту:</label>
     <input type="range" id="fontSize" min="20" max="46" value="30">
@@ -175,6 +179,7 @@ let trackedWords = [];         // [{text, normalized, el}]
 let lookAheadWindow = 3;
 let totalProcessedWords = 0;
 let trackDeacon = true;
+let soloMode = false;          // режим "Служу сам" (ховає дияконське, міняє ролі)
 
 function normalize(w){
   return w.toLowerCase().replace(/[\u2019\u2018\u0027\u0060]/g,"'").replace(/[^\p{L}\u0027]/gu,'').trim();
@@ -200,12 +205,30 @@ function isTracked(block){
   return true;
 }
 
+// Перетворює блок під режим "Служу сам".
+// Позначки в блоці: solo:"hide" — сховати; solo:"priest" — роль стає Священник;
+// soloText — окремий текст для соло-режиму (показується замість text).
+// Повертає блок для показу або null (сховати). У звичайному режимі — без змін.
+function applySolo(block){
+  if(!soloMode) return block;
+  if(block.solo === 'hide') return null;
+  let b = block;
+  if(block.solo === 'priest' || block.soloText){
+    b = Object.assign({}, block);
+    if(block.solo === 'priest') b.role = 'Священник';
+    if(block.soloText) b.text = block.soloText;
+  }
+  return b;
+}
+
 function render(){
   const scroll = document.getElementById('scroll');
   scroll.innerHTML = '';
   trackedWords = [];
 
-  for (const block of BLOCKS){
+  for (const rawBlock of BLOCKS){
+    const block = applySolo(rawBlock);
+    if (block === null) continue;
     if (block.t === 'title'){
       const d = document.createElement('div');
       d.className = 'b-title'; d.textContent = block.text;
@@ -406,6 +429,9 @@ document.getElementById('window').addEventListener('input',(e)=>{
 });
 document.getElementById('trackDeacon').addEventListener('change',(e)=>{
   trackDeacon=e.target.checked; const saved=currentIndex; render(); currentIndex=Math.min(saved,trackedWords.length); updateHighlight();
+});
+document.getElementById('soloMode').addEventListener('change',(e)=>{
+  soloMode=e.target.checked; currentIndex=0; totalProcessedWords=0; render();
 });
 document.getElementById('fontSize').addEventListener('input',(e)=>{
   const v=e.target.value; document.getElementById('fontOut').textContent=v;
