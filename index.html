@@ -143,12 +143,8 @@
     <span style="color:#555;">слів вперед (менше = менше стрибків)</span>
   </div>
   <div class="settings-row" style="margin-top:12px;">
-    <input type="checkbox" id="trackDeacon" checked>
-    <label for="trackDeacon">Я промовляю дияконські частини (служу сам)</label>
-  </div>
-  <div class="settings-row" style="margin-top:12px;">
-    <input type="checkbox" id="soloMode">
-    <label for="soloMode">Режим «Служу сам»: ховати дії диякона, мої частини — як Священник</label>
+    <input type="checkbox" id="soloMode" checked>
+    <label for="soloMode">Служу сам (без диякона): ховати дії диякона, промовляю і дияконські частини</label>
   </div>
   <div class="settings-row" style="margin-top:8px;">
     <label>Розмір тексту:</label>
@@ -178,8 +174,8 @@ let currentIndex = 0;          // index into trackedWords
 let trackedWords = [];         // [{text, normalized, el}]
 let lookAheadWindow = 3;
 let totalProcessedWords = 0;
-let trackDeacon = true;
-let soloMode = false;          // режим "Служу сам" (ховає дияконське, міняє ролі)
+let soloMode = true;           // "Служу сам": ховає дії диякона, трекає дияконське,
+                               // міняє ролі. Увімкнено за замовч. (постійний режим отця)
 
 function normalize(w){
   return w.toLowerCase().replace(/[\u2019\u2018\u0027\u0060]/g,"'").replace(/[^\p{L}\u0027]/gu,'').trim();
@@ -201,7 +197,8 @@ function parenMask(text){
 
 function isTracked(block){
   if (block.t !== 'say') return false;
-  if (block.role === 'Диякон' && !trackDeacon) return false;
+  // коли НЕ служу сам — дияконські частини промовляє диякон, їх не трекаю
+  if (block.role === 'Диякон' && !soloMode) return false;
   return true;
 }
 
@@ -426,9 +423,6 @@ function toggleSettings(){ document.getElementById('settings').classList.toggle(
 
 document.getElementById('window').addEventListener('input',(e)=>{
   lookAheadWindow=parseInt(e.target.value); document.getElementById('windowOut').textContent=lookAheadWindow;
-});
-document.getElementById('trackDeacon').addEventListener('change',(e)=>{
-  trackDeacon=e.target.checked; const saved=currentIndex; render(); currentIndex=Math.min(saved,trackedWords.length); updateHighlight();
 });
 document.getElementById('soloMode').addEventListener('change',(e)=>{
   soloMode=e.target.checked; currentIndex=0; totalProcessedWords=0; render();
