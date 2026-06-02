@@ -92,7 +92,7 @@
     display: inline-block; color: #6a6a6a; font-size: 13px; font-weight: 500;
     text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
   }
-  .b-say .saytext { font-size: 30px; line-height: 1.5; }
+  .b-say .saytext { font-size: var(--say-fs, 30px); line-height: 1.5; }
   .word { color: #f0f0f0; transition: color .2s, background-color .2s; cursor: pointer; border-radius: 4px; padding: 0 2px; }
   .word:hover { background: rgba(255,255,255,.06); }
   .word.said { color: #9a9a9a; }
@@ -143,7 +143,7 @@
 
   @media (max-width: 700px) {
     .scroll { padding: 24px 20px 60vh; }
-    .b-say .saytext { font-size: 24px; }
+    .b-say .saytext { font-size: var(--say-fs, 24px); }
     .b-title { font-size: 21px; }
     .topbar h1 { display: none; }
   }
@@ -1023,7 +1023,9 @@ document.getElementById('soloMode').addEventListener('change',(e)=>{
 });
 document.getElementById('fontSize').addEventListener('input',(e)=>{
   const v=e.target.value; document.getElementById('fontOut').textContent=v;
-  document.querySelectorAll('.saytext').forEach(el=> el.style.fontSize=v+'px');
+  // CSS-змінна на <html> — застосовується до всіх .saytext і ПЕРЕЖИВАЄ перемальовування
+  document.documentElement.style.setProperty('--say-fs', v+'px');
+  try{ localStorage.setItem('liturgia_fontSize', v); }catch(_){}
 });
 
 // --- НЕ ГАСИТИ ЕКРАН (Screen Wake Lock) ---
@@ -1145,6 +1147,17 @@ function updateSectionIndicator(){
     if(raf) return;
     raf = requestAnimationFrame(()=>{ raf = null; updateSectionIndicator(); });
   }, {passive:true});
+})();
+
+// відновити збережений розмір шрифту ДО першого рендера (CSS-змінна на <html>)
+(function(){
+  let v = null;
+  try{ v = localStorage.getItem('liturgia_fontSize'); }catch(_){}
+  if(v){
+    document.documentElement.style.setProperty('--say-fs', v+'px');
+    const fs = document.getElementById('fontSize'); if(fs) fs.value = v;
+    const fo = document.getElementById('fontOut'); if(fo) fo.textContent = v;
+  }
 })();
 
 render();
