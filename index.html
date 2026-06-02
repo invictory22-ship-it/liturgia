@@ -170,6 +170,29 @@
     0%, 100% { background: transparent; }
     25% { background: rgba(176,149,96,.22); }
   }
+
+  /* ДОВІДКОВА СТОРІНКА (відкривається з шухляди, читається у головному вікні) */
+  .ref-page {
+    position: fixed; inset: 0; background: #0a0a0a; z-index: 60;
+    overflow-y: auto; transform: translateX(100%);
+    transition: transform .25s ease; visibility: hidden;
+  }
+  .ref-page.open { transform: translateX(0); visibility: visible; }
+  .ref-back {
+    position: sticky; top: 0; background: #0d0d0d; border-bottom: 1px solid #1f1f1f;
+    padding: 13px 16px; color: #b09560; font-size: 15px; cursor: pointer;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .ref-back:hover { background: #141414; }
+  .ref-body { padding: 18px 20px 60px; max-width: 720px; margin: 0 auto; }
+  .ref-title { color: #c9a96a; font-size: 21px; text-align: center; margin: 8px 0 6px; }
+  .ref-subtitle { color: #666; font-size: 13px; text-align: center; margin-bottom: 20px; }
+  .ref-section { color: #b09560; font-size: 16px; text-align: center;
+    margin: 26px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #262015; }
+  .ref-h { color: #9a8a5f; font-size: 14px; font-weight: 600; margin: 20px 0 6px; }
+  .ref-say { margin: 12px 0; }
+  .ref-say .ref-role { color: #777; font-size: 12px; margin-bottom: 3px; }
+  .ref-text { font-size: 20px; line-height: 1.5; color: #e8e2d0; }
 </style>
 </head>
 <body>
@@ -205,7 +228,8 @@
   <a onclick="jumpTo('dod-velyka')">Велика ектенія — додаткові прохання</a>
   <a onclick="jumpTo('dod-potrijna')">Потрійна ектенія — додаткові прохання</a>
 
-  <div class="drawer-group">Довідник (буде далі)</div>
+  <div class="drawer-group">Довідник</div>
+  <a onclick="openReference()">Додаткові прохання на ектеніях</a>
   <a class="soon">Прокимни, величання, відпусти</a>
   <a class="soon">Наука про відпусти</a>
   <a class="soon">Молитви перед / після Причастя</a>
@@ -215,6 +239,15 @@
   <a class="soon">Вечірня</a>
   <a class="soon">Утреня (Рання)</a>
 </aside>
+
+<div class="ref-page" id="refPage">
+  <div class="ref-back" onclick="closeReference()">← Назад до служби</div>
+  <div class="ref-body">
+    <div class="ref-title">Додаткові прохання на ектеніях</div>
+    <div class="ref-subtitle">той самий текст, що в Літургії — служебник, стор. 182–194</div>
+    <div id="refBody"></div>
+  </div>
+</div>
 
 <div class="footer">
   <div class="footer-row">
@@ -499,6 +532,47 @@ function jumpTo(id){
   void el.offsetWidth;            // перезапуск анімації
   el.classList.add('flash-target');
 }
+
+// Довідкова сторінка: будує текст із ТИХ САМИХ fold-блоків (за id), що й у службі.
+// Жодної копії — редагуєш текст раз, змінюється і тут, і в Літургії.
+function openReference(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  const body = document.getElementById('refBody');
+  body.innerHTML = '';
+  const sections = [
+    { label: 'На великій ектенії',  id: 'dod-velyka'   },
+    { label: 'На потрійній ектенії', id: 'dod-potrijna' },
+  ];
+  for (const s of sections){
+    const fold = BLOCKS.find(b => b.id === s.id);
+    if (!fold) continue;
+    const sec = document.createElement('div');
+    sec.className = 'ref-section'; sec.textContent = s.label;
+    body.appendChild(sec);
+    for (const cb of (fold.blocks || [])){
+      if (cb.t === 'header'){
+        const d = document.createElement('div');
+        d.className = 'ref-h'; d.textContent = cb.text;
+        body.appendChild(d);
+      } else {
+        const w = document.createElement('div'); w.className = 'ref-say';
+        if (cb.role){
+          const r = document.createElement('div');
+          r.className = 'ref-role'; r.textContent = cb.role;
+          w.appendChild(r);
+        }
+        const t = document.createElement('div');
+        t.className = 'ref-text'; t.textContent = cb.text;
+        w.appendChild(t);
+        body.appendChild(w);
+      }
+    }
+  }
+  document.getElementById('refPage').classList.add('open');
+  document.getElementById('refPage').scrollTop = 0;
+}
+function closeReference(){ document.getElementById('refPage').classList.remove('open'); }
 
 document.getElementById('window').addEventListener('input',(e)=>{
   lookAheadWindow=parseInt(e.target.value); document.getElementById('windowOut').textContent=lookAheadWindow;
