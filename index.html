@@ -111,9 +111,10 @@
     font-size: 11px; line-height: 1.15; padding: 6px 10px; text-align: center;
     color: #aaa;
   }
-  .status { color: #888; font-size: 12px; margin-left: auto; }
+  .status-row { line-height: 1.3; }
+  .status { color: #888; font-size: 12px; }
   .status.listening { color: #ff9933; }
-  .status.error { color: #d04040; }
+  .status.error { color: #ff6b6b; font-size: 13px; font-weight: 500; }
   /* "почуте" — окремий рядок ПІД кнопками, на всю ширину */
   .heard { color: #555; font-size: 11px; font-style: italic;
     overflow: hidden; min-height: 28px; line-height: 1.25;
@@ -295,13 +296,13 @@
       <span id="keepAwakeNote" style="color:#555;"></span>
     </div>
   </div>
+  <div class="status-row"><span class="status" id="status">Готово</span></div>
   <div class="footer-row">
     <button class="icon-btn" onclick="toggleSettings()" title="Налаштування">⚙</button>
     <button class="primary" id="btnStart" onclick="toggleListening()">▶ Почати</button>
     <button class="icon-btn" onclick="reset()" title="Спочатку">↺</button>
     <button class="goto-btn" onclick="scrollToCurrent()" title="Прокрутити до підсвіченого місця">↓ Місце<br>зупинки</button>
-    <span class="status" id="status">Готово</span>
-    <button class="icon-btn" onclick="toggleMenu()" title="Меню / Зміст">☰</button>
+    <button class="icon-btn" onclick="toggleMenu()" title="Меню / Зміст" style="margin-left:auto;">☰</button>
   </div>
   <div class="heard" id="heard"></div>
 </div>
