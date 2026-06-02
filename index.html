@@ -32,8 +32,10 @@
   button.primary:hover { background: #d97a2c; }
   button.primary.listening { background: #1a1a1a; border-color: #c4661a; color: #c4661a; }
   .settings {
-    background: #080808; border-bottom: 1px solid #1f1f1f;
-    padding: 14px 18px; display: none; flex-shrink: 0;
+    position: absolute; left: 0; right: 0; bottom: 100%;
+    background: #080808; border-top: 1px solid #1f1f1f;
+    padding: 14px 18px; display: none; z-index: 30;
+    box-shadow: 0 -8px 22px rgba(0,0,0,.55);
   }
   .settings.open { display: block; }
   .settings-row {
@@ -94,6 +96,7 @@
   }
 
   .footer {
+    position: relative;
     background: #0d0d0d; border-top: 1px solid #1f1f1f; padding: 8px 14px;
     display: flex; flex-direction: column; gap: 4px;
     flex-shrink: 0;
@@ -227,24 +230,6 @@
 
 <div class="scroll" id="scroll"></div>
 
-<div class="settings" id="settings">
-  <div class="settings-row">
-    <label>Вікно пошуку:</label>
-    <input type="range" id="window" min="2" max="15" value="3">
-    <span id="windowOut" style="color:#ddd;min-width:18px;">3</span>
-    <span style="color:#555;">слів вперед (менше = менше стрибків)</span>
-  </div>
-  <div class="settings-row" style="margin-top:12px;">
-    <input type="checkbox" id="soloMode" checked>
-    <label for="soloMode">Служу сам (без диякона): ховати дії диякона, промовляю і дияконські частини</label>
-  </div>
-  <div class="settings-row" style="margin-top:8px;">
-    <label>Розмір тексту:</label>
-    <input type="range" id="fontSize" min="20" max="46" value="30">
-    <span id="fontOut" style="color:#ddd;">30</span>
-  </div>
-</div>
-
 <div class="drawer-overlay" id="drawerOverlay" onclick="toggleMenu()"></div>
 <aside class="drawer" id="drawer">
   <div class="drawer-scroll">
@@ -265,7 +250,7 @@
     <a class="soon">Вечірня</a>
     <a class="soon">Утреня (Рання)</a>
   </div>
-  <div class="drawer-foot" onclick="toggleMenu()">Згорнути меню</div>
+  <div class="drawer-foot" onclick="toggleMenu()">Згорнути ☰</div>
 </aside>
 
 <div class="ref-page" id="refPage">
@@ -284,6 +269,23 @@
 <div class="toast" id="toast"></div>
 
 <div class="footer">
+  <div class="settings" id="settings">
+    <div class="settings-row">
+      <label>Вікно пошуку:</label>
+      <input type="range" id="window" min="2" max="15" value="3">
+      <span id="windowOut" style="color:#ddd;min-width:18px;">3</span>
+      <span style="color:#555;">слів вперед (менше = менше стрибків)</span>
+    </div>
+    <div class="settings-row" style="margin-top:12px;">
+      <input type="checkbox" id="soloMode" checked>
+      <label for="soloMode">Служу сам (без диякона): ховати дії диякона, промовляю і дияконські частини</label>
+    </div>
+    <div class="settings-row" style="margin-top:8px;">
+      <label>Розмір тексту:</label>
+      <input type="range" id="fontSize" min="20" max="46" value="30">
+      <span id="fontOut" style="color:#ddd;">30</span>
+    </div>
+  </div>
   <div class="footer-row">
     <button class="icon-btn" onclick="toggleSettings()" title="Налаштування">⚙</button>
     <button class="primary" id="btnStart" onclick="toggleListening()">▶ Почати</button>
