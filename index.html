@@ -135,7 +135,10 @@
   .b-fold > summary::before { content: "\25b8 "; color: #6a5f3a; }
   .b-fold[open] > summary::before { content: "\25be "; }
   .b-fold > summary:hover { background: #141414; }
-  .b-fold[open] > summary { margin-bottom: 8px; color: #b09560; }
+  .b-fold[open] > summary {
+    margin-bottom: 8px; color: #b09560;
+    position: sticky; top: 0; z-index: 5; background: #0d0d0d;
+  }
   .b-fold .b-stage { margin: 10px 0; border-left-color: #3a3320; }
   .fold-h { display: flex; align-items: flex-start; gap: 8px;
     color: #9a8a5f; font-size: 14px; font-weight: 600; margin: 16px 0 4px; }
@@ -308,6 +311,18 @@ let totalProcessedWords = 0;
 let soloMode = true;           // "Служу сам": ховає дії диякона, трекає дияконське,
                                // міняє ролі. Увімкнено за замовч. (постійний режим отця)
 
+let heardBuffer = [];          // останні почуті слова (для аварійного підхвату)
+let stallCount = 0;            // скільки почутих слів поспіль НЕ зрушили трекер
+let lastScrolledIndex = -1;    // куди востаннє прокрутили (щоб не смикати екран дарма)
+let userScrollPauseUntil = 0;  // до цього часу (ms) авто-прокрутка відступає (юзер гортає рукою)
+// Аварійний підхват: коли трекер застряг, а отець уже читає далі — шукаємо останні
+// почуті слова ШИРОКО вперед по тексту і перестрибуємо туди, де він реально читає.
+const STALL_LIMIT = 4;         // після стількох "порожніх" слів вмикаємо підхват
+const ANCHOR_RANGE = 160;      // як далеко вперед шукати (слів)
+const ANCHOR_MIN_RUN = 2;      // стільки слів поспіль мають збігтись, щоб стрибнути
+const HEARD_KEEP = 8;          // скільки останніх почутих слів памʼятати
+const SCROLL_PAUSE_MS = 4000;  // на скільки авто-прокрутка відступає після дотику
+
 function normalize(w){
   return w.toLowerCase().replace(/[\u2019\u2018\u0027\u0060]/g,"'").replace(/[^\p{L}\u0027]/gu,'').trim();
 }
@@ -383,8 +398,19 @@ function render(){
       if (block.id) det.id = block.id;
       if (block.open) det.open = true;
       const sum = document.createElement('summary');
-      sum.textContent = block.text;
       det.appendChild(sum);
+      // текст шапки: згорнуто — як у даних; розгорнуто — підказка «згорнути»
+      const setSumText = () => {
+        sum.textContent = det.open
+          ? 'Додаткові прохання — торкніться, щоб згорнути'
+          : block.text;
+      };
+      setSumText();
+      det.addEventListener('toggle', () => {
+        setSumText();
+        // згорнули глибоко в списку — повернути сам акордеон у вид, щоб не загубитись
+        if (!det.open) det.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
       buildFoldInner(det, block);
       scroll.appendChild(det);
     } else if (block.t === 'say'){
@@ -439,12 +465,16 @@ function updateHighlight(){
     if (i < currentIndex) el.classList.add('said');
     else if (i === currentIndex) el.classList.add('current');
   }
-  const cur = trackedWords[currentIndex] && trackedWords[currentIndex].el;
-  if (cur) cur.scrollIntoView({behavior:'smooth', block:'center'});
+  // Прокручуємо ЛИШЕ коли позиція реально змінилась і отець зараз не гортає рукою.
+  if (currentIndex !== lastScrolledIndex && Date.now() > userScrollPauseUntil){
+    const cur = trackedWords[currentIndex] && trackedWords[currentIndex].el;
+    if (cur){ cur.scrollIntoView({behavior:'smooth', block:'center'}); lastScrolledIndex = currentIndex; }
+  }
 }
 
 function setPosition(i){
   currentIndex = i; totalProcessedWords = 0;
+  heardBuffer = []; stallCount = 0; lastScrolledIndex = -1;
   if (recognition && isListening){ try{recognition.stop();}catch(e){} }
   updateHighlight();
 }
@@ -465,22 +495,23 @@ function wordMatches(h,e){
   return p >= 4 && tailH <= 2 && tailE <= 3;
 }
 
+// Повертає true, якщо трекер зрушив (інакше false — "порожнє" слово).
 function advance(heard){
   const tw = trackedWords;
-  if(currentIndex >= tw.length) return;
+  if(currentIndex >= tw.length) return false;
   const cur = tw[currentIndex].normalized;
   // 1) ПОТОЧНЕ слово — рухаємось рівно на 1. Дозволяємо й короткі слова
   //    ("і", "ще", "їх"): для них спрацює лише точний збіг (h===e), тож шум
   //    майже не зашкодить, зате трекер на них більше не застрягає.
   if(wordMatches(heard, cur)){
-    currentIndex++; return;
+    currentIndex++; return true;
   }
   // 1b) СКЛЕЙКА: Google інколи зливає два слова в одне ("на віки"->"навіки",
   //     "і євангелиста"->"ієвангелиста"). Якщо почуте = поточне+наступне
   //     разом — зараховуємо обидва.
   if(currentIndex+1 < tw.length){
     const glued = cur + tw[currentIndex+1].normalized;
-    if(heard === glued){ currentIndex += 2; return; }
+    if(heard === glued){ currentIndex += 2; return true; }
   }
   // 2) СТРИБОК уперед по вікну — ЛИШЕ за ТОЧНИМ збігом і лише для довгих
   //    (>=4 літери) слів. Так трекер доганяє, якщо пропустив шматок, але не
@@ -488,22 +519,54 @@ function advance(heard){
   if(heard.length >= 4){
     const end = Math.min(currentIndex+lookAheadWindow, tw.length);
     for(let i=currentIndex+1; i<end; i++){
-      if(heard === tw[i].normalized){ currentIndex=i+1; return; }
+      if(heard === tw[i].normalized){ currentIndex=i+1; return true; }
     }
   }
   // не знайшли — лишаємось на місці (краще зачекати, ніж стрибнути навмання)
+  return false;
+}
+
+// АВАРІЙНИЙ ПІДХВАТ. Викликається, коли трекер застряг (кілька почутих слів
+// поспіль нічого не зрушили), а отець насправді читає десь далі. Беремо останні
+// почуті слова й шукаємо їхню ПОСЛІДОВНІСТЬ широко вперед по тексту. Якщо
+// знайшли 2+ слова поспіль — перестрибуємо туди. Беремо НАЙБЛИЖЧИЙ збіг із
+// найдовшою серією — щоб не плутати схожі ектенії й не перестрибувати задалеко.
+function reanchor(){
+  const tw = trackedWords;
+  const probe = heardBuffer.slice(-4).filter(Boolean);
+  if(probe.length < ANCHOR_MIN_RUN) return false;
+  const end = Math.min(currentIndex + ANCHOR_RANGE, tw.length);
+  let bestRun = 0, bestEnd = -1;
+  for(let i = currentIndex + 1; i < end; i++){
+    let run = 0;
+    while(run < probe.length && i+run < tw.length &&
+          wordMatches(probe[run], tw[i+run].normalized)) run++;
+    if(run > bestRun){ bestRun = run; bestEnd = i + run; }  // стрибаємо за серію
+  }
+  if(bestRun >= ANCHOR_MIN_RUN){ currentIndex = bestEnd; return true; }
+  return false;
 }
 
 // Прокрутити екран до поточного (підсвіченого) місця.
 function scrollToCurrent(){
   const cur = trackedWords[currentIndex] && trackedWords[currentIndex].el;
-  if(cur) cur.scrollIntoView({behavior:'smooth', block:'center'});
+  if(cur){ cur.scrollIntoView({behavior:'smooth', block:'center'}); lastScrolledIndex = currentIndex; }
 }
 
 function processTranscript(t){
   const words = t.trim().split(/\s+/).map(normalize).filter(Boolean);
   const fresh = words.slice(totalProcessedWords);
-  for(const w of fresh) advance(w);
+  for(const w of fresh){
+    if(!w) continue;
+    heardBuffer.push(w);
+    if(heardBuffer.length > HEARD_KEEP) heardBuffer.shift();
+    if(advance(w)){
+      stallCount = 0;
+    } else {
+      stallCount++;
+      if(stallCount >= STALL_LIMIT && reanchor()) stallCount = 0;
+    }
+  }
   totalProcessedWords = words.length;
   updateHighlight();
 }
@@ -513,7 +576,7 @@ function startListening(){
   if(!SR){ setStatus('Браузер не підтримує розпізнавання. Chrome або Edge.', 'error'); return; }
   recognition = new SR();
   recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'uk-UA';
-  totalProcessedWords = 0;
+  totalProcessedWords = 0; heardBuffer = []; stallCount = 0;
   recognition.onresult = (e)=>{
     let full=''; for(let i=0;i<e.results.length;i++) full += e.results[i][0].transcript+' ';
     processTranscript(full);
@@ -545,7 +608,7 @@ function resetBtn(){
   b.textContent='▶ Почати'; b.classList.remove('listening');
 }
 function toggleListening(){ isListening ? stopListening() : startListening(); }
-function reset(){ currentIndex=0; totalProcessedWords=0; updateHighlight(); document.getElementById('heard').textContent=''; }
+function reset(){ currentIndex=0; totalProcessedWords=0; heardBuffer=[]; stallCount=0; lastScrolledIndex=-1; updateHighlight(); document.getElementById('heard').textContent=''; }
 function setStatus(m,c){ const s=document.getElementById('status'); s.textContent=m; s.className='status'+(c?' '+c:''); }
 function toggleSettings(){ document.getElementById('settings').classList.toggle('open'); }
 
@@ -772,6 +835,16 @@ document.getElementById('fontSize').addEventListener('input',(e)=>{
   const v=e.target.value; document.getElementById('fontOut').textContent=v;
   document.querySelectorAll('.saytext').forEach(el=> el.style.fontSize=v+'px');
 });
+
+// Коли отець гортає екран рукою (палець/коліщатко) — авто-прокрутка відступає,
+// щоб можна було вільно подивитись/торкнутись іншої ектенії, коли трекер завис.
+(function(){
+  const sc = document.getElementById('scroll');
+  if(!sc) return;
+  const pause = ()=>{ userScrollPauseUntil = Date.now() + SCROLL_PAUSE_MS; };
+  sc.addEventListener('wheel', pause, {passive:true});
+  sc.addEventListener('touchmove', pause, {passive:true});
+})();
 
 render();
 </script>
