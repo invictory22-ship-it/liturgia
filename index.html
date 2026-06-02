@@ -97,8 +97,8 @@
 
   .footer {
     position: relative;
-    background: #0d0d0d; border-top: 1px solid #1f1f1f; padding: 8px 14px;
-    display: flex; flex-direction: column; gap: 4px;
+    background: #0d0d0d; border-top: 1px solid #1f1f1f; padding: 3px 14px 8px;
+    display: flex; flex-direction: column; gap: 3px;
     flex-shrink: 0;
   }
   .footer-row { display: flex; align-items: center; gap: 10px; }
@@ -114,13 +114,13 @@
   /* галерея розділів "ти тут" — горизонтальна стрічка над кнопками (без пігулок) */
   .section-strip {
     display: flex; align-items: center; overflow-x: auto; scroll-behavior: smooth;
-    padding: 2px 42vw; align-self: stretch;
+    padding: 0 42vw; align-self: stretch;
     -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
   .section-strip::-webkit-scrollbar { display: none; }
   .sec-chip {
     flex: 0 0 auto; white-space: nowrap; font-size: 13px; color: #5a5a5a;
-    padding: 5px 6px; cursor: pointer; user-select: none;
+    padding: 3px 6px; cursor: pointer; user-select: none;
     transition: color .2s;
   }
   .sec-chip.active { color: #c9a96a; font-weight: 600; }
@@ -430,7 +430,7 @@ function render(){
       // текст шапки: згорнуто — як у даних; розгорнуто — підказка «згорнути»
       const setSumText = () => {
         sum.textContent = det.open
-          ? 'Додаткові прохання — торкніться, щоб згорнути'
+          ? 'Торкніться, щоб згорнути'
           : block.text;
       };
       setSumText();
