@@ -134,16 +134,20 @@
   .b-fold > summary:hover { background: #141414; }
   .b-fold[open] > summary { margin-bottom: 8px; color: #b09560; }
   .b-fold .b-stage { margin: 10px 0; border-left-color: #3a3320; }
+  .fold-h { display: flex; align-items: flex-start; gap: 8px;
+    color: #9a8a5f; font-size: 14px; font-weight: 600; margin: 16px 0 4px; }
+  .fold-favnote { color: #b09560; font-size: 12px; text-transform: uppercase;
+    letter-spacing: .05em; margin: 8px 0 4px; }
 
   /* МЕНЮ-ШУХЛЯДА (виїжджає справа) */
   .drawer-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,.55);
-    opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40;
+    opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 65;
   }
   .drawer-overlay.open { opacity: 1; pointer-events: auto; }
   .drawer {
     position: fixed; top: 0; right: 0; height: 100%; width: min(84vw, 350px);
-    background: #111; border-left: 1px solid #262626; z-index: 50;
+    background: #111; border-left: 1px solid #262626; z-index: 70;
     transform: translateX(100%); transition: transform .25s ease;
     overflow-y: auto; padding: 18px 16px 40px;
   }
@@ -178,18 +182,30 @@
     transition: transform .25s ease; visibility: hidden;
   }
   .ref-page.open { transform: translateX(0); visibility: visible; }
-  .ref-back {
-    position: sticky; top: 0; background: #0d0d0d; border-bottom: 1px solid #1f1f1f;
-    padding: 13px 16px; color: #b09560; font-size: 15px; cursor: pointer;
-    display: flex; gap: 8px; align-items: center;
+  .ref-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 61;
+    background: #0d0d0d; border-top: 1px solid #1f1f1f;
+    display: flex; justify-content: space-between; align-items: center;
   }
-  .ref-back:hover { background: #141414; }
-  .ref-body { padding: 18px 20px 60px; max-width: 720px; margin: 0 auto; }
+  .ref-bar > span {
+    padding: 15px 18px; color: #b09560; font-size: 15px; cursor: pointer;
+  }
+  .ref-bar > span:hover { background: #141414; }
+  .ref-body { padding: 18px 20px 84px; max-width: 720px; margin: 0 auto; }
   .ref-title { color: #c9a96a; font-size: 21px; text-align: center; margin: 8px 0 6px; }
   .ref-subtitle { color: #666; font-size: 13px; text-align: center; margin-bottom: 20px; }
   .ref-section { color: #b09560; font-size: 16px; text-align: center;
     margin: 26px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #262015; }
-  .ref-h { color: #9a8a5f; font-size: 14px; font-weight: 600; margin: 20px 0 6px; }
+  .ref-h { color: #9a8a5f; font-size: 14px; font-weight: 600; margin: 20px 0 6px;
+    display: flex; align-items: flex-start; gap: 8px; }
+  .fav-star { color: #4a4a4a; font-size: 19px; line-height: 1; cursor: pointer;
+    user-select: none; padding: 2px 5px; margin: -2px 0; flex-shrink: 0; }
+  .fav-star.on { color: #e0b94e; }
+  .ref-favhead { color: #c9a96a; font-size: 17px; text-align: center;
+    margin: 12px 0 4px; }
+  .ref-favsub { color: #777; font-size: 12px; text-align: center;
+    font-style: italic; margin: 12px 0 2px; }
+  .ref-divider { border-top: 1px solid #2a2419; margin: 22px 0 4px; }
   .ref-say { margin: 12px 0; }
   .ref-say .ref-role { color: #777; font-size: 12px; margin-bottom: 3px; }
   .ref-text { font-size: 20px; line-height: 1.5; color: #e8e2d0; }
@@ -241,11 +257,14 @@
 </aside>
 
 <div class="ref-page" id="refPage">
-  <div class="ref-back" onclick="closeReference()">← Назад до служби</div>
   <div class="ref-body">
     <div class="ref-title">Додаткові прохання на ектеніях</div>
     <div class="ref-subtitle">той самий текст, що в Літургії — служебник, стор. 182–194</div>
     <div id="refBody"></div>
+  </div>
+  <div class="ref-bar">
+    <span onclick="closeReference()">← Назад до служби</span>
+    <span onclick="toggleMenu()">Меню ☰</span>
   </div>
 </div>
 
@@ -349,11 +368,7 @@ function render(){
       const sum = document.createElement('summary');
       sum.textContent = block.text;
       det.appendChild(sum);
-      for (const cb of (block.blocks||[])){
-        const c = document.createElement('div');
-        c.className = 'b-stage'; c.textContent = cb.text;
-        det.appendChild(c);
-      }
+      buildFoldInner(det, block);
       scroll.appendChild(det);
     } else if (block.t === 'say'){
       const wrap = document.createElement('div');
@@ -524,6 +539,7 @@ function toggleMenu(){
 // "Стрибок" з меню: закрити шухляду, розгорнути акордеон, прокрутити до нього, блимнути.
 function jumpTo(id){
   toggleMenu();
+  closeReference();              // якщо була відкрита довідка — закрити, ми йдемо в службу
   const el = document.getElementById(id);
   if(!el) return;
   el.open = true;
@@ -533,44 +549,164 @@ function jumpTo(id){
   el.classList.add('flash-target');
 }
 
-// Довідкова сторінка: будує текст із ТИХ САМИХ fold-блоків (за id), що й у службі.
-// Жодної копії — редагуєш текст раз, змінюється і тут, і в Літургії.
-function openReference(){
-  document.getElementById('drawer').classList.remove('open');
-  document.getElementById('drawerOverlay').classList.remove('open');
+// --- ОБРАНЕ (зберігається на цьому пристрої) ---
+// Ключ прохання = текст його заголовка. Обране тримаємо як список таких ключів.
+function loadFavs(){
+  try { return new Set(JSON.parse(localStorage.getItem('liturgia_favs') || '[]')); }
+  catch(e){ return new Set(); }
+}
+function saveFavs(){ try { localStorage.setItem('liturgia_favs', JSON.stringify([...favs])); } catch(e){} }
+let favs = loadFavs();
+function isFav(key){ return favs.has(key); }
+function toggleFav(key){
+  if (favs.has(key)) favs.delete(key); else favs.add(key);
+  saveFavs();
+  refreshFavViews();       // оновити обидва види — і акордеони, і довідку
+}
+// Перемалювати всюди, де показуються прохання (синхронно), не чіпаючи решту служби.
+function refreshFavViews(){
+  for (const b of BLOCKS){
+    if (b.t === 'fold' && b.id){
+      const det = document.getElementById(b.id);
+      if (det) buildFoldInner(det, b);
+    }
+  }
+  if (document.getElementById('refPage').classList.contains('open')) renderReferenceBody();
+}
+
+// Згрупувати блоки акордеону в прохання: заголовок + молитви під ним до наступного заголовка.
+function groupPetitions(blocks){
+  const groups = []; let cur = null;
+  for (const b of (blocks || [])){
+    if (b.t === 'header'){ cur = { header: b, prayers: [] }; groups.push(cur); }
+    else { if (!cur){ cur = { header: null, prayers: [] }; groups.push(cur); } cur.prayers.push(b); }
+  }
+  return groups;
+}
+
+// Наповнення акордеону в самій Літургії: ті ж прохання, обрані — нагору, з хрестами.
+// Синхронно з Довідником (спільний список обраного). Не додає слів у трекінг.
+function buildFoldInner(det, foldBlock){
+  const sum = det.querySelector('summary');
+  det.innerHTML = '';
+  if (sum) det.appendChild(sum);
+
+  const groups = groupPetitions(foldBlock.blocks);
+  const favG  = groups.filter(g => g.header && isFav(g.header.text.trim()));
+  const restG = groups.filter(g => !(g.header && isFav(g.header.text.trim())));
+
+  const addPetition = (g) => {
+    if (g.header){
+      const key = g.header.text.trim();
+      const h = document.createElement('div'); h.className = 'fold-h';
+      const star = document.createElement('span');
+      star.className = 'fav-star' + (isFav(key) ? ' on' : '');
+      star.textContent = '✠';
+      star.title = 'Додати в обрані / прибрати';
+      star.onclick = (e) => { e.preventDefault(); e.stopPropagation(); toggleFav(key); };
+      const tx = document.createElement('span'); tx.textContent = g.header.text;
+      h.appendChild(star); h.appendChild(tx);
+      det.appendChild(h);
+    }
+    for (const cb of g.prayers){
+      const c = document.createElement('div');
+      c.className = 'b-stage'; c.textContent = cb.text;
+      det.appendChild(c);
+    }
+  };
+
+  if (favG.length){
+    const note = document.createElement('div');
+    note.className = 'fold-favnote'; note.textContent = '✠ Обрані';
+    det.appendChild(note);
+    favG.forEach(addPetition);
+    if (restG.length){
+      const dv = document.createElement('div'); dv.className = 'ref-divider';
+      det.appendChild(dv);
+    }
+  }
+  restG.forEach(addPetition);
+}
+
+function renderPetition(body, g){
+  if (g.header){
+    const key = g.header.text.trim();
+    const h = document.createElement('div'); h.className = 'ref-h';
+    const star = document.createElement('span');
+    star.className = 'fav-star' + (isFav(key) ? ' on' : '');
+    star.textContent = '✠';      // мальтійський хрест: тьмяний = звичайне, золотий = обране
+    star.title = 'Додати в обрані / прибрати';
+    star.onclick = () => toggleFav(key);
+    const tx = document.createElement('span'); tx.textContent = g.header.text;
+    h.appendChild(star); h.appendChild(tx);
+    body.appendChild(h);
+  }
+  for (const cb of g.prayers){
+    const w = document.createElement('div'); w.className = 'ref-say';
+    if (cb.role){
+      const r = document.createElement('div');
+      r.className = 'ref-role'; r.textContent = cb.role;
+      w.appendChild(r);
+    }
+    const t = document.createElement('div');
+    t.className = 'ref-text'; t.textContent = cb.text;
+    w.appendChild(t);
+    body.appendChild(w);
+  }
+}
+
+// Будує текст із ТИХ САМИХ fold-блоків (за id), що й у службі. Жодної копії.
+// УСІ обрані — одним блоком на самому верху (з підписом ектенії), і прибрані з основних списків.
+function renderReferenceBody(){
   const body = document.getElementById('refBody');
   body.innerHTML = '';
   const sections = [
-    { label: 'На великій ектенії',  id: 'dod-velyka'   },
-    { label: 'На потрійній ектенії', id: 'dod-potrijna' },
+    { label: 'На великій ектенії',  sub: 'на великій ектенії',  id: 'dod-velyka'   },
+    { label: 'На потрійній ектенії', sub: 'на потрійній ектенії', id: 'dod-potrijna' },
   ];
-  for (const s of sections){
+
+  // зібрати по кожній ектенії: обрані та решта
+  const data = sections.map(s => {
     const fold = BLOCKS.find(b => b.id === s.id);
-    if (!fold) continue;
-    const sec = document.createElement('div');
-    sec.className = 'ref-section'; sec.textContent = s.label;
-    body.appendChild(sec);
-    for (const cb of (fold.blocks || [])){
-      if (cb.t === 'header'){
-        const d = document.createElement('div');
-        d.className = 'ref-h'; d.textContent = cb.text;
-        body.appendChild(d);
-      } else {
-        const w = document.createElement('div'); w.className = 'ref-say';
-        if (cb.role){
-          const r = document.createElement('div');
-          r.className = 'ref-role'; r.textContent = cb.role;
-          w.appendChild(r);
-        }
-        const t = document.createElement('div');
-        t.className = 'ref-text'; t.textContent = cb.text;
-        w.appendChild(t);
-        body.appendChild(w);
-      }
+    const groups = fold ? groupPetitions(fold.blocks) : [];
+    return {
+      ...s,
+      fav:  groups.filter(g => g.header && isFav(g.header.text.trim())),
+      rest: groups.filter(g => !(g.header && isFav(g.header.text.trim()))),
+    };
+  });
+
+  // 1) БЛОК "ОБРАНІ" на самому верху — усе разом, з підписом, з якої ектенії
+  if (data.some(d => d.fav.length)){
+    const head = document.createElement('div');
+    head.className = 'ref-favhead'; head.textContent = '✠ Обрані';
+    body.appendChild(head);
+    for (const d of data){
+      if (!d.fav.length) continue;
+      const cap = document.createElement('div');
+      cap.className = 'ref-favsub'; cap.textContent = d.sub;
+      body.appendChild(cap);
+      d.fav.forEach(g => renderPetition(body, g));
     }
+    const dv = document.createElement('div');
+    dv.className = 'ref-divider'; body.appendChild(dv);
   }
-  document.getElementById('refPage').classList.add('open');
-  document.getElementById('refPage').scrollTop = 0;
+
+  // 2) ПОВНІ СПИСКИ по ектеніях (обрані звідси прибрані, щоб не дублювались)
+  for (const d of data){
+    const sec = document.createElement('div');
+    sec.className = 'ref-section'; sec.textContent = d.label;
+    body.appendChild(sec);
+    d.rest.forEach(g => renderPetition(body, g));
+  }
+}
+
+function openReference(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  renderReferenceBody();
+  const p = document.getElementById('refPage');
+  p.classList.add('open'); p.scrollTop = 0;
 }
 function closeReference(){ document.getElementById('refPage').classList.remove('open'); }
 
