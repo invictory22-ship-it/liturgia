@@ -337,21 +337,22 @@ let currentIndex = 0;          // index into trackedWords
 let trackedWords = [];         // [{text, normalized, el, blk}] blk = № мовленнєвого блоку
 let sayBlk = 0;                // лічильник мовленнєвих блоків (для меж підхвату)
 let sectionHeaders = [];       // [{el, text}] — заголовки розділів для індикатора "ти тут"
-let lookAheadWindow = 3;
-let totalProcessedWords = 0;
+let lookAheadWindow = 3;       // (історичний повзунок; стрибок тепер вимагає 2 слова, див. advance)
+let finalWordCount = 0;        // скільки ФІНАЛЬНИХ слів уже оброблено (interim ігноруємо)
 let soloMode = true;           // "Служу сам": ховає дії диякона, трекає дияконське,
                                // міняє ролі. Увімкнено за замовч. (постійний режим отця)
 
-let heardBuffer = [];          // останні почуті слова (для аварійного підхвату)
+let heardBuffer = [];          // останні почуті слова (для стрибка по парі + підхвату)
 let stallCount = 0;            // скільки почутих слів поспіль НЕ зрушили трекер
 let lastScrolledIndex = -1;    // куди востаннє прокрутили (щоб не смикати екран дарма)
 let userScrollPauseUntil = 0;  // до цього часу (ms) авто-прокрутка відступає (юзер гортає рукою)
-// Аварійний підхват: коли трекер застряг, а отець уже читає далі — шукаємо останні
-// почуті слова ШИРОКО вперед по тексту і перестрибуємо туди, де він реально читає.
 const STALL_LIMIT = 4;         // після стількох "порожніх" слів вмикаємо підхват
 const ANCHOR_MIN_RUN = 3;      // 3 слова поспіль (щоб НЕ чіплятись за "Господу помолимось")
 const HEARD_KEEP = 8;          // скільки останніх почутих слів памʼятати
 const SCROLL_PAUSE_MS = 4000;  // на скільки авто-прокрутка відступає після дотику
+// Стрибок уперед: лише за ДВОМА словами поспіль, у межах блоку + "місток" у наступний.
+const FWD_WINDOW = 10;         // макс. слів уперед для стрибка
+const BRIDGE_TAIL = 5;         // "близько до кінця молитви" = лишилось <= стільки слів
 
 function normalize(w){
   return w.toLowerCase().replace(/[\u2019\u2018\u0027\u0060]/g,"'").replace(/[^\p{L}\u0027]/gu,'').trim();
@@ -523,7 +524,7 @@ function updateHighlight(){
 }
 
 function setPosition(i){
-  currentIndex = i; totalProcessedWords = 0;
+  currentIndex = i; finalWordCount = 0;
   heardBuffer = []; stallCount = 0; lastScrolledIndex = -1;
   if (recognition && isListening){ try{recognition.stop();}catch(e){} }
   updateHighlight();
@@ -563,13 +564,25 @@ function advance(heard){
     const glued = cur + tw[currentIndex+1].normalized;
     if(heard === glued){ currentIndex += 2; return true; }
   }
-  // 2) СТРИБОК уперед по вікну — ЛИШЕ за ТОЧНИМ збігом і лише для довгих
-  //    (>=4 літери) слів. Так трекер доганяє, якщо пропустив шматок, але не
-  //    стрибає навмання на короткому/повторюваному слові й не випереджає.
-  if(heard.length >= 4){
-    const end = Math.min(currentIndex+lookAheadWindow, tw.length);
-    for(let i=currentIndex+1; i<end; i++){
-      if(heard === tw[i].normalized){ currentIndex=i+1; return true; }
+  // 2) СТРИБОК уперед — ЛИШЕ за ДВОМА словами поспіль (одне слово в повторюваному
+  //    тексті ненадійне). Шукаємо позицію, де передостаннє почуте = tw[i-1], а
+  //    останнє (heard) = tw[i]. СТІНА: не виходимо за межі поточної молитви; МІСТОК:
+  //    коли вже близько до кінця молитви — дозволяємо зазирнути на початок наступної.
+  if(heardBuffer.length >= 2){
+    const prev = heardBuffer[heardBuffer.length-2];
+    const curBlk = tw[currentIndex].blk;
+    let blockEnd = currentIndex+1;
+    while(blockEnd < tw.length && tw[blockEnd].blk === curBlk) blockEnd++;
+    let limit = blockEnd;
+    if(blockEnd - currentIndex <= BRIDGE_TAIL && blockEnd < tw.length){
+      const nextBlk = tw[blockEnd].blk;                 // місток у наступний блок
+      while(limit < tw.length && tw[limit].blk === nextBlk) limit++;
+    }
+    const end = Math.min(currentIndex + FWD_WINDOW, limit);
+    for(let i = currentIndex+2; i < end; i++){
+      if(wordMatches(prev, tw[i-1].normalized) && wordMatches(heard, tw[i].normalized)){
+        currentIndex = i+1; return true;                // два поспіль → впевнено
+      }
     }
   }
   // не знайшли — лишаємось на місці (краще зачекати, ніж стрибнути навмання)
@@ -613,9 +626,8 @@ function scrollToCurrent(){
   if(cur){ cur.scrollIntoView({behavior:'smooth', block:'center'}); lastScrolledIndex = currentIndex; }
 }
 
-function processTranscript(t){
-  const words = t.trim().split(/\s+/).map(normalize).filter(Boolean);
-  const fresh = words.slice(totalProcessedWords);
+// Обробляємо ЛИШЕ нові фінальні слова (стабільні, Google їх уже не перепише).
+function consumeFinalWords(fresh){
   for(const w of fresh){
     if(!w) continue;
     heardBuffer.push(w);
@@ -627,7 +639,6 @@ function processTranscript(t){
       if(stallCount >= STALL_LIMIT && reanchor()) stallCount = 0;
     }
   }
-  totalProcessedWords = words.length;
   updateHighlight();
 }
 
@@ -636,20 +647,30 @@ function startListening(){
   if(!SR){ setStatus('Браузер не підтримує розпізнавання. Chrome або Edge.', 'error'); return; }
   recognition = new SR();
   recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'uk-UA';
-  totalProcessedWords = 0; heardBuffer = []; stallCount = 0;
+  finalWordCount = 0; heardBuffer = []; stallCount = 0;
   recognition.onresult = (e)=>{
-    let full=''; for(let i=0;i<e.results.length;i++) full += e.results[i][0].transcript+' ';
-    processTranscript(full);
-    // Показуємо ХВІСТ потоку (останні ~14 слів) — видно, що розпізнавання живе.
-    const tail = full.trim().split(/\s+/).slice(-14).join(' ');
-    document.getElementById('heard').textContent = tail ? '… '+tail : '';
+    // Збираємо ОКРЕМО фінальний (стабільний) і проміжний (interim) текст.
+    let finalText='', interim='';
+    for(let i=0;i<e.results.length;i++){
+      if(e.results[i].isFinal) finalText += e.results[i][0].transcript+' ';
+      else interim += e.results[i][0].transcript+' ';
+    }
+    // Трекер рухаємо ЛИШЕ новими фінальними словами (interim переписується — не годуємо ним).
+    const finalWords = finalText.trim().split(/\s+/).map(normalize).filter(Boolean);
+    const fresh = finalWords.slice(finalWordCount);
+    finalWordCount = finalWords.length;
+    if(fresh.length) consumeFinalWords(fresh);
+    // Показ «почуте»: фінальний хвіст + проміжне в дужках [..] — видно, що розпізнавання живе.
+    const itrim = interim.trim();
+    const shown = (finalWords.slice(-8).join(' ') + (itrim ? '  ['+itrim+']' : '')).trim();
+    document.getElementById('heard').textContent = shown ? '… '+shown : '';
   };
   recognition.onerror = (e)=>{
     if(e.error==='no-speech'||e.error==='aborted') return;
     if(e.error==='not-allowed'){ setStatus('Немає доступу до мікрофона. Дозволь мікрофон у браузері й натисни Почати.', 'error'); isListening=false; resetBtn(); return; }
     setStatus('Помилка: '+e.error, 'error');
   };
-  recognition.onend = ()=>{ if(isListening){ totalProcessedWords=0; try{recognition.start();}catch(e){} } };
+  recognition.onend = ()=>{ if(isListening){ finalWordCount=0; heardBuffer=[]; try{recognition.start();}catch(e){} } };
   try{
     recognition.start(); isListening=true;
     document.getElementById('btnStart').textContent='⏸ Зупинити';
@@ -669,7 +690,7 @@ function resetBtn(){
   b.textContent='▶ Почати'; b.classList.remove('listening');
 }
 function toggleListening(){ isListening ? stopListening() : startListening(); }
-function reset(){ currentIndex=0; totalProcessedWords=0; heardBuffer=[]; stallCount=0; lastScrolledIndex=-1; userScrollPauseUntil=0; updateHighlight(); document.getElementById('heard').textContent=''; }
+function reset(){ currentIndex=0; finalWordCount=0; heardBuffer=[]; stallCount=0; lastScrolledIndex=-1; userScrollPauseUntil=0; updateHighlight(); document.getElementById('heard').textContent=''; }
 function setStatus(m,c){ const s=document.getElementById('status'); s.textContent=m; s.className='status'+(c?' '+c:''); }
 function toggleSettings(){ document.getElementById('settings').classList.toggle('open'); }
 
@@ -896,7 +917,7 @@ document.getElementById('window').addEventListener('input',(e)=>{
   lookAheadWindow=parseInt(e.target.value); document.getElementById('windowOut').textContent=lookAheadWindow;
 });
 document.getElementById('soloMode').addEventListener('change',(e)=>{
-  soloMode=e.target.checked; currentIndex=0; totalProcessedWords=0; render();
+  soloMode=e.target.checked; currentIndex=0; finalWordCount=0; render();
 });
 document.getElementById('fontSize').addEventListener('input',(e)=>{
   const v=e.target.value; document.getElementById('fontOut').textContent=v;
