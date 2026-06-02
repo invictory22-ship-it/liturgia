@@ -661,10 +661,16 @@ function toggleFav(key){
   saveFavs();
   refreshFavViews();       // оновити обидва види — і акордеони, і довідку
 
-  // повернути прокрутку так, щоб тапнуте прохання лишилось на тому ж місці
+  // повернути прокрутку так, щоб тапнуте прохання лишилось на тому ж місці.
+  // МИТТЄВО (вимикаємо smooth), інакше браузер анімує зсув — видно мікро-прокрутку.
   if (scroller && before != null){
     const after = lastHeaderTop(scroller, key);
-    if (after != null) scroller.scrollTop += (after - before);
+    if (after != null && after !== before){
+      const prev = scroller.style.scrollBehavior;
+      scroller.style.scrollBehavior = 'auto';
+      scroller.scrollTop += (after - before);
+      scroller.style.scrollBehavior = prev;
+    }
   }
   showToast(adding ? 'Додано в обране' : 'Прибрано з обраного');
 }
