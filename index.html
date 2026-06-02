@@ -546,78 +546,77 @@ function wordMatches(h,e){
   return p >= 4 && tailH <= 2 && tailE <= 3;
 }
 
-// Повертає true, якщо трекер зрушив (інакше false — "порожнє" слово).
-function advance(heard){
-  const tw = trackedWords;
-  if(currentIndex >= tw.length) return false;
-  const cur = tw[currentIndex].normalized;
-  // 1) ПОТОЧНЕ слово — рухаємось рівно на 1. Дозволяємо й короткі слова
-  //    ("і", "ще", "їх"): для них спрацює лише точний збіг (h===e), тож шум
-  //    майже не зашкодить, зате трекер на них більше не застрягає.
-  if(wordMatches(heard, cur)){
-    currentIndex++; return true;
-  }
-  // 1b) СКЛЕЙКА: Google інколи зливає два слова в одне ("на віки"->"навіки",
-  //     "і євангелиста"->"ієвангелиста"). Якщо почуте = поточне+наступне
-  //     разом — зараховуємо обидва.
-  if(currentIndex+1 < tw.length){
-    const glued = cur + tw[currentIndex+1].normalized;
-    if(heard === glued){ currentIndex += 2; return true; }
-  }
-  // 2) СТРИБОК уперед — ЛИШЕ за ДВОМА словами поспіль (одне слово в повторюваному
-  //    тексті ненадійне). Шукаємо позицію, де передостаннє почуте = tw[i-1], а
-  //    останнє (heard) = tw[i]. СТІНА: не виходимо за межі поточної молитви; МІСТОК:
-  //    коли вже близько до кінця молитви — дозволяємо зазирнути на початок наступної.
-  if(heardBuffer.length >= 2){
-    const prev = heardBuffer[heardBuffer.length-2];
-    const curBlk = tw[currentIndex].blk;
-    let blockEnd = currentIndex+1;
-    while(blockEnd < tw.length && tw[blockEnd].blk === curBlk) blockEnd++;
-    let limit = blockEnd;
-    if(blockEnd - currentIndex <= BRIDGE_TAIL && blockEnd < tw.length){
-      const nextBlk = tw[blockEnd].blk;                 // місток у наступний блок
-      while(limit < tw.length && tw[limit].blk === nextBlk) limit++;
-    }
-    const end = Math.min(currentIndex + FWD_WINDOW, limit);
-    for(let i = currentIndex+2; i < end; i++){
-      if(wordMatches(prev, tw[i-1].normalized) && wordMatches(heard, tw[i].normalized)){
-        currentIndex = i+1; return true;                // два поспіль → впевнено
-      }
-    }
-  }
-  // не знайшли — лишаємось на місці (краще зачекати, ніж стрибнути навмання)
-  return false;
+// ── СКОРИНГ ПОЗИЦІЇ (локальне вирівнювання) ─────────────────────────────────
+// Замість "побачив слово → стрибнув" трекер дивиться на ОСТАННІ ~6 почутих слів
+// і шукає, де ця послідовність найкраще лягає в межах поточної молитви (+місток).
+// Рухається лише коли є ЧІТКИЙ лідер; коли два місця майже рівні (повторювана
+// формула) — СТОЇТЬ. Слова ПЕРЕД кінцівкою унікальні, тож молитви не плутаються.
+const PROBE_LEN = 6;          // скільки останніх почутих слів беремо в розрахунок
+const SCORE_DECAY = 0.85;     // давніші слова важать менше
+const MOVE_MIN_SCORE = 2.0;   // мінімум "очок" (~3 слова поспіль), щоб зрушити
+const RIVAL_RATIO = 0.8;      // якщо інше місце має >=80% очок лідера — неоднозначно, стоїмо
+const ALIGN_BACK = 2;         // трохи назад (якщо трекер забіг уперед)
+const ALIGN_FWD_MAX = 50;     // запобіжник на ширину пошуку (стіна блоку зазвичай вужча)
+
+function wordScore(h, t){
+  if(!h || !t) return 0;
+  if(h === t) return 1.0;
+  if(wordMatches(h, t)) return 0.85;
+  return 0;
 }
 
-// АВАРІЙНИЙ ПІДХВАТ. Викликається, коли трекер застряг (кілька почутих слів
-// поспіль нічого не зрушили), а отець насправді читає десь далі.
-// ГОЛОВНЕ ПРАВИЛО: підхват працює ЛИШЕ В МЕЖАХ ПОТОЧНОЇ молитви/ектенії і
-// фізично НЕ МОЖЕ перестрибнути на іншу молитву. Тому повторювані формули в
-// КІНЦІ молитов ("Отцю і Сину і Святому Духові", "Господу помолимось") більше
-// не зманюють трекер на чужий блок. Усередині блоку шукаємо 3 слова поспіль,
-// і лише якщо таке місце єдине (не плутаємось у самій молитві).
-function reanchor(){
-  const tw = trackedWords;
-  if(currentIndex >= tw.length) return false;
-  const probe = heardBuffer.slice(-4).filter(Boolean);
-  if(probe.length < ANCHOR_MIN_RUN) return false;
-  const curBlk = tw[currentIndex].blk;
-  // межа = кінець ПОТОЧНОГО блоку (далі не заходимо)
-  let end = currentIndex + 1;
-  while(end < tw.length && tw[end].blk === curBlk) end++;
-  let firstEnd = -1, hits = 0;
-  for(let i = currentIndex + 1; i < end; i++){
-    let run = 0;
-    while(run < probe.length && i+run < end &&
-          wordMatches(probe[run], tw[i+run].normalized)) run++;
-    if(run >= ANCHOR_MIN_RUN){
-      if(firstEnd === -1) firstEnd = i + run;   // найближче місце в блоці
-      hits++;
-      i += run;                                  // не рахувати той самий збіг двічі
-    }
+// Наскільки добре почутий хвіст лягає, ЗАКІНЧУЮЧИСЬ на позиції i (останнє слово → i).
+function scoreEndingAt(i, probe){
+  let s = 0;
+  for(let k = 0; k < probe.length; k++){
+    const ti = i - k;
+    if(ti < 0) break;
+    s += wordScore(probe[probe.length - 1 - k], trackedWords[ti].normalized) * Math.pow(SCORE_DECAY, k);
   }
-  if(hits === 1){ currentIndex = firstEnd; return true; }  // ЄДИНЕ в блоці → стрибаємо
-  return false;                                            // 0 або кілька → чекаємо
+  return s;
+}
+
+// Головна функція: оновити позицію за накопиченим буфером почутих слів.
+function syncPosition(){
+  const tw = trackedWords;
+  if(currentIndex >= tw.length) return;
+  const probe = heardBuffer.slice(-PROBE_LEN);
+  if(!probe.length) return;
+
+  // СТІНА + МІСТОК: верхня межа пошуку = кінець поточної молитви; якщо ми вже
+  // близько до кінця — дозволяємо зазирнути на початок наступної молитви.
+  const curBlk = tw[currentIndex].blk;
+  let blockEnd = currentIndex + 1;
+  while(blockEnd < tw.length && tw[blockEnd].blk === curBlk) blockEnd++;
+  let wall = blockEnd;
+  if(blockEnd - currentIndex <= BRIDGE_TAIL && blockEnd < tw.length){
+    const nextBlk = tw[blockEnd].blk;
+    while(wall < tw.length && tw[wall].blk === nextBlk) wall++;
+  }
+  const lo = Math.max(0, currentIndex - ALIGN_BACK);
+  const hi = Math.min(wall, currentIndex + ALIGN_FWD_MAX);
+
+  // Очки для кожної позиції; шукаємо лідера й найсильнішого "суперника" подалі.
+  let bestI = -1, bestS = 0;
+  const scores = [];
+  for(let i = lo; i < hi; i++){
+    let s = scoreEndingAt(i, probe);
+    if(i > currentIndex) s -= (i - currentIndex) * 0.04;   // легкий штраф за відстань
+    if(tw[i].blk !== curBlk) s -= 0.5;                     // міст через межу — трохи дорожче
+    scores[i] = s;
+    if(s > bestS){ bestS = s; bestI = i; }
+  }
+  if(bestI < 0) return;
+  // суперник = найкраще очко в іншому місці (далеко від лідера) → ознака неоднозначності
+  let rival = 0;
+  for(let i = lo; i < hi; i++){
+    if(Math.abs(i - bestI) >= 4 && scores[i] > rival) rival = scores[i];
+  }
+
+  // Рухаємось лише ВПЕРЕД, з достатньою впевненістю і без рівного суперника.
+  if(bestI > currentIndex && bestS >= MOVE_MIN_SCORE && rival < bestS * RIVAL_RATIO){
+    currentIndex = bestI + 1;
+  }
 }
 
 // Прокрутити екран до поточного (підсвіченого) місця.
@@ -632,13 +631,8 @@ function consumeFinalWords(fresh){
     if(!w) continue;
     heardBuffer.push(w);
     if(heardBuffer.length > HEARD_KEEP) heardBuffer.shift();
-    if(advance(w)){
-      stallCount = 0;
-    } else {
-      stallCount++;
-      if(stallCount >= STALL_LIMIT && reanchor()) stallCount = 0;
-    }
   }
+  syncPosition();        // оновити позицію за накопиченим буфером
   updateHighlight();
 }
 
