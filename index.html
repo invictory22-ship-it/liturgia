@@ -97,7 +97,7 @@
 
   .footer {
     position: relative;
-    background: #0d0d0d; border-top: 1px solid #1f1f1f; padding: 3px 14px 8px;
+    background: #0d0d0d; border-top: 3px solid #2a2a2a; padding: 3px 14px 8px;
     display: flex; flex-direction: column; gap: 3px;
     flex-shrink: 0;
   }
@@ -937,6 +937,13 @@ document.addEventListener('visibilitychange', ()=>{
 // золотий, сусіди приглушені; тап по розділу = стрибок туди (перегляд, не зсув позиції).
 let activeSectionIdx = -1;
 let sectionChips = [];
+let galleryJumpUntil = 0;       // під час стрибка по тапу не реагуємо на проміжні розділи
+function setActiveChip(idx){
+  if(idx === activeSectionIdx) return;
+  activeSectionIdx = idx;
+  sectionChips.forEach((c, i) => c.classList.toggle('active', i === idx));
+  if(idx >= 0) centerChip(idx);
+}
 function buildSectionStrip(){
   const strip = document.getElementById('sectionStrip');
   if(!strip) return;
@@ -953,6 +960,8 @@ function buildSectionStrip(){
     c.className = 'sec-chip'; c.textContent = h.text;
     c.onclick = () => {
       userScrollPauseUntil = Date.now() + SCROLL_PAUSE_MS;   // дати спокійно подивитись
+      galleryJumpUntil = Date.now() + 800;                   // не смикати стрічку під час стрибка
+      setActiveChip(i);                                      // одразу підсвітити й центрувати обраний
       // стрибок з невеликим відступом зверху, щоб заголовок не впирався у край
       const sc = document.getElementById('scroll');
       const scTop = sc.getBoundingClientRect().top;
@@ -972,6 +981,7 @@ function centerChip(i){
   strip.scrollTo({ left: target, behavior:'smooth' });
 }
 function updateSectionIndicator(){
+  if(Date.now() < galleryJumpUntil) return;   // під час стрибка по тапу не смикаємо стрічку
   const sc = document.getElementById('scroll');
   const strip = document.getElementById('sectionStrip');
   if(!sc || !strip) return;
@@ -982,10 +992,7 @@ function updateSectionIndicator(){
     if(sectionHeaders[i].el.getBoundingClientRect().top <= threshold) idx = i;
     else break;   // заголовки в порядку зверху вниз
   }
-  if(idx === activeSectionIdx) return;        // активний розділ не змінився
-  activeSectionIdx = idx;
-  sectionChips.forEach((c, i) => c.classList.toggle('active', i === idx));
-  if(idx >= 0) centerChip(idx);
+  setActiveChip(idx);
 }
 (function(){
   const sc = document.getElementById('scroll');
