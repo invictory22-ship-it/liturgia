@@ -154,6 +154,7 @@ const BLOCKS = [
   "id": "dod-velyka",
   "text": "Тут бувають додаткові прохання. Торкнись, щоб розгорнути.",
   "open": false,
+  "trackMode": "fav",
   "blocks": [
    {
     "t": "header",
@@ -926,6 +927,7 @@ const BLOCKS = [
   "id": "dod-potrijna",
   "text": "Тут бувають додаткові прохання. Торкнись, щоб розгорнути.",
   "open": false,
+  "trackMode": "fav",
   "blocks": [
    {
     "t": "header",
