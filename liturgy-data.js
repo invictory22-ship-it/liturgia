@@ -1277,7 +1277,7 @@ const BLOCKS = [
   "t": "fold",
   "role": "",
   "id": "ektenia-ogoloshenykh",
-  "text": "Диякон виголошує ектенію за оголошених... Натисни, щоб розгорнути.",
+  "text": "Ектенія за оголошених... Натисни, щоб розгорнути.",
   "open": false,
   "trackMode": "all",
   "blocks": [
