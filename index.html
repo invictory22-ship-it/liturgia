@@ -395,116 +395,168 @@ function applySolo(block){
   return b;
 }
 
-function render(){
+function render(skipHL){
   const scroll = document.getElementById('scroll');
   scroll.innerHTML = '';
   trackedWords = [];
   sectionHeaders = [];
   sayBlk = 0;
 
-  for (const rawBlock of BLOCKS){
+  BLOCKS.forEach((rawBlock, bi) => {
+    if (rawBlock.t === 'fold'){ renderFold(scroll, rawBlock, bi); return; }
     const block = applySolo(rawBlock);
-    if (block === null) continue;
-    if (block.t === 'title'){
-      const d = document.createElement('div');
-      d.className = 'b-title'; d.textContent = block.text;
-      scroll.appendChild(d);
-    } else if (block.t === 'header'){
-      const d = document.createElement('div');
-      d.className = 'b-header';
-      const sp = document.createElement('span'); sp.textContent = block.text;
-      d.appendChild(sp);
-      scroll.appendChild(d);
-      sectionHeaders.push({ el: d, text: block.text });
-    } else if (block.t === 'stage'){
-      const d = document.createElement('div');
-      d.className = 'b-stage'; d.textContent = block.text;
-      scroll.appendChild(d);
-    } else if (block.t === 'choir'){
-      const d = document.createElement('div');
-      d.className = 'b-choir';
-      const lbl = document.createElement('span');
-      lbl.className = 'lbl'; lbl.textContent = (block.role || 'Хор') + ':';
-      d.appendChild(lbl);
-      d.appendChild(document.createTextNode(block.text));
-      scroll.appendChild(d);
-    } else if (block.t === 'fold'){
-      const det = document.createElement('details');
-      det.className = 'b-fold';
-      if (block.id) det.id = block.id;
-      if (block.open) det.open = true;
-      const sum = document.createElement('summary');
-      det.appendChild(sum);
-      // текст шапки: згорнуто — як у даних; розгорнуто — підказка «згорнути»
-      const setSumText = () => {
-        sum.textContent = det.open
-          ? 'Торкніться, щоб згорнути'
-          : block.text;
-      };
-      setSumText();
-      det.addEventListener('toggle', () => {
-        setSumText();
-        // згорнули глибоко в списку — повернути сам акордеон у вид, щоб не загубитись
-        if (!det.open) det.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      });
-      buildFoldInner(det, block);
-      scroll.appendChild(det);
-    } else if (block.t === 'image'){
-      const fig = document.createElement('div');
-      fig.className = 'b-image';
-      const img = document.createElement('img');
-      img.src = block.src; img.alt = block.alt || ''; img.loading = 'lazy';
-      fig.appendChild(img);
-      if (block.caption){
-        const cap = document.createElement('div');
-        cap.className = 'b-image-cap'; cap.textContent = block.caption;
-        fig.appendChild(cap);
-      }
-      scroll.appendChild(fig);
-    } else if (block.t === 'say'){
-      sayBlk++;                       // номер цього мовленнєвого блоку (молитви/ектенії)
-      const wrap = document.createElement('div');
-      wrap.className = 'b-say';
-      if (block.role){
-        const r = document.createElement('div');
-        r.className = 'role'; r.textContent = block.role;
-        wrap.appendChild(r);
-      }
-      const txt = document.createElement('div');
-      txt.className = 'saytext';
-      const tracked = isTracked(block);
-      // Позначаємо, які символи тексту стоять у дужках ( ) — їх не трекаємо
-      const inParen = parenMask(block.text);
-      const tokens = block.text.split(/(\s+)/);
-      let offset = 0;
-      for (const tok of tokens){
-        const start = offset; offset += tok.length;
-        if (/^\s+$/.test(tok)){ txt.appendChild(document.createTextNode(tok)); continue; }
-        if (normalize(tok).length === 0){ txt.appendChild(document.createTextNode(tok)); continue; }
-        // чи цей токен (хоч частково) у дужках?
-        let isParen = false;
-        for (let k = start; k < start + tok.length; k++){ if (inParen[k]){ isParen = true; break; } }
-        const span = document.createElement('span');
-        span.className = 'word'; span.textContent = tok;
-        if (tracked && !isParen){
-          const gi = trackedWords.length;
-          span.dataset.gi = gi;
-          span.addEventListener('click', ()=> setPosition(gi));
-          trackedWords.push({ text: tok, normalized: normalize(tok), el: span, blk: sayBlk });
-        } else if (isParen){
-          span.classList.add('paren');
-          span.style.cursor = 'default';
-        } else {
-          span.style.cursor = 'default';
-          span.style.color = '#555';
-        }
-        txt.appendChild(span);
-      }
-      wrap.appendChild(txt);
-      scroll.appendChild(wrap);
-    }
-  }
+    if (block === null) return;
+    appendBlock(scroll, block, String(bi));
+  });
+
   buildSectionStrip();
+  if (!skipHL) updateHighlight();
+}
+
+// Малює ОДИН блок (крім fold) у parent. path — стабільний шлях блоку
+// (напр. "42" для верхнього рівня або "70.3" для дитини акордеона); з нього
+// будуємо ключ кожного трекованого слова, щоб тримати позицію при перемальовуванні.
+function appendBlock(parent, block, path){
+  if (block.t === 'title'){
+    const d = document.createElement('div');
+    d.className = 'b-title'; d.textContent = block.text;
+    parent.appendChild(d);
+  } else if (block.t === 'header'){
+    const d = document.createElement('div');
+    d.className = 'b-header';
+    const sp = document.createElement('span'); sp.textContent = block.text;
+    d.appendChild(sp);
+    parent.appendChild(d);
+    sectionHeaders.push({ el: d, text: block.text });
+  } else if (block.t === 'stage'){
+    const d = document.createElement('div');
+    d.className = 'b-stage'; d.textContent = block.text;
+    parent.appendChild(d);
+  } else if (block.t === 'choir'){
+    const d = document.createElement('div');
+    d.className = 'b-choir';
+    const lbl = document.createElement('span');
+    lbl.className = 'lbl'; lbl.textContent = (block.role || 'Хор') + ':';
+    d.appendChild(lbl);
+    d.appendChild(document.createTextNode(block.text));
+    parent.appendChild(d);
+  } else if (block.t === 'image'){
+    const fig = document.createElement('div');
+    fig.className = 'b-image';
+    const img = document.createElement('img');
+    img.src = block.src; img.alt = block.alt || ''; img.loading = 'lazy';
+    fig.appendChild(img);
+    if (block.caption){
+      const cap = document.createElement('div');
+      cap.className = 'b-image-cap'; cap.textContent = block.caption;
+      fig.appendChild(cap);
+    }
+    parent.appendChild(fig);
+  } else if (block.t === 'say'){
+    sayBlk++;                       // номер цього мовленнєвого блоку (молитви/ектенії)
+    const wrap = document.createElement('div');
+    wrap.className = 'b-say';
+    if (block.role){
+      const r = document.createElement('div');
+      r.className = 'role'; r.textContent = block.role;
+      wrap.appendChild(r);
+    }
+    const txt = document.createElement('div');
+    txt.className = 'saytext';
+    const tracked = isTracked(block);
+    // Позначаємо, які символи тексту стоять у дужках ( ) — їх не трекаємо
+    const inParen = parenMask(block.text);
+    const tokens = block.text.split(/(\s+)/);
+    let offset = 0, wi = 0;
+    for (const tok of tokens){
+      const start = offset; offset += tok.length;
+      if (/^\s+$/.test(tok)){ txt.appendChild(document.createTextNode(tok)); continue; }
+      if (normalize(tok).length === 0){ txt.appendChild(document.createTextNode(tok)); continue; }
+      // чи цей токен (хоч частково) у дужках?
+      let isParen = false;
+      for (let k = start; k < start + tok.length; k++){ if (inParen[k]){ isParen = true; break; } }
+      const span = document.createElement('span');
+      span.className = 'word'; span.textContent = tok;
+      if (tracked && !isParen){
+        const gi = trackedWords.length;
+        span.dataset.gi = gi;
+        span.addEventListener('click', ()=> setPosition(gi));
+        trackedWords.push({ text: tok, normalized: normalize(tok), el: span, blk: sayBlk, key: path+'#'+wi });
+        wi++;
+      } else if (isParen){
+        span.classList.add('paren');
+        span.style.cursor = 'default';
+      } else {
+        span.style.cursor = 'default';
+        span.style.color = '#555';
+      }
+      txt.appendChild(span);
+    }
+    wrap.appendChild(txt);
+    parent.appendChild(wrap);
+  }
+}
+
+// Малює акордеон. Якщо він РОЗГОРНУТИЙ і має trackMode:"all" — його вміст
+// малюється звичайними блоками (молитви великі й ТРЕКАЮТЬСЯ); інакше — як було
+// (buildFoldInner: дрібний сірий вміст, обрані прохання вгорі).
+function renderFold(parent, foldBlock, bi){
+  const det = document.createElement('details');
+  det.className = 'b-fold';
+  if (foldBlock.id) det.id = foldBlock.id;
+  if (foldBlock.open) det.open = true;
+  const sum = document.createElement('summary');
+  det.appendChild(sum);
+  const isTrack = foldBlock.trackMode === 'all';
+  const setSumText = () => { sum.textContent = det.open ? 'Торкніться, щоб згорнути' : foldBlock.text; };
+  setSumText();
+
+  det.addEventListener('toggle', () => {
+    // ігноруємо «спурйозну» подію, коли стан і так збігається (напр. початкове
+    // програмне розгортання) — інакше перемальовування зациклиться
+    if (det.open === foldBlock.open) return;
+    foldBlock.open = det.open;
+    if (isTrack){
+      // трекований акордеон: перебудувати список слів, зберігши позицію,
+      // і повернути сам акордеон у поле зору (innerHTML перебудовано)
+      rerenderPreserving();
+      const fresh = foldBlock.id && document.getElementById(foldBlock.id);
+      if (fresh) fresh.scrollIntoView({ block: 'start' });
+    } else {
+      // акордеони обраного — як було: без перемальовування, лиш текст шапки
+      setSumText();
+      if (!det.open) det.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  });
+
+  if (foldBlock.open && isTrack){
+    foldBlock.blocks.forEach((cb, ci) => {
+      const b = applySolo(cb);
+      if (b === null) return;
+      appendBlock(det, b, bi + '.' + ci);
+    });
+  } else {
+    buildFoldInner(det, foldBlock);
+  }
+  parent.appendChild(det);
+}
+
+// Перемальовуємо сторінку, зберігши позицію трекера за стабільним ключем слова.
+// Викликається при розгортанні/згортанні акордеона (список слів змінюється).
+function rerenderPreserving(){
+  // ключі поточного слова й кількох попередніх — на випадок, якщо поточне зникло
+  const keys = [];
+  for (let k = currentIndex; k >= 0 && k > currentIndex - 5; k--){
+    if (trackedWords[k]) keys.push(trackedWords[k].key);
+  }
+  render(true);                       // перебудувати без авто-підсвітки/прокрутки
+  let ni = -1;
+  for (const key of keys){
+    ni = trackedWords.findIndex(w => w.key === key);
+    if (ni >= 0) break;
+  }
+  currentIndex = ni >= 0 ? ni : Math.min(currentIndex, Math.max(0, trackedWords.length - 1));
+  lastScrolledIndex = currentIndex;   // не смикати екран під час перемальовування
   updateHighlight();
 }
 
@@ -775,6 +827,7 @@ function showToast(msg){
 function refreshFavViews(){
   for (const b of BLOCKS){
     if (b.t === 'fold' && b.id){
+      if (b.open && b.trackMode === 'all') continue;   // не чіпати розгорнуту трековану ектенію
       const det = document.getElementById(b.id);
       if (det) buildFoldInner(det, b);
     }
