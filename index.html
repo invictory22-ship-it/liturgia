@@ -134,6 +134,42 @@
   .b-fold > summary:hover { background: #141414; }
   .b-fold[open] > summary { margin-bottom: 8px; color: #b09560; }
   .b-fold .b-stage { margin: 10px 0; border-left-color: #3a3320; }
+
+  /* МЕНЮ-ШУХЛЯДА (виїжджає справа) */
+  .drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 40;
+  }
+  .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: fixed; top: 0; right: 0; height: 100%; width: min(84vw, 350px);
+    background: #111; border-left: 1px solid #262626; z-index: 50;
+    transform: translateX(100%); transition: transform .25s ease;
+    overflow-y: auto; padding: 18px 16px 40px;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head {
+    color: #b09560; font-size: 18px; margin-bottom: 6px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .drawer-close { color: #888; font-size: 22px; cursor: pointer; padding: 0 6px; }
+  .drawer-group {
+    color: #777; font-size: 12px; text-transform: uppercase;
+    letter-spacing: .05em; margin: 18px 0 4px;
+  }
+  .drawer a {
+    display: block; color: #ddd; text-decoration: none;
+    padding: 11px 10px; border-radius: 8px; font-size: 15px; cursor: pointer;
+  }
+  .drawer a:hover { background: #1c1c1c; }
+  .drawer a.soon { color: #555; cursor: default; }
+  .drawer a.soon:hover { background: transparent; }
+  /* короткий спалах на акордеоні, куди стрибнули з меню */
+  .flash-target > summary { animation: flashGlow 1.6s ease; }
+  @keyframes flashGlow {
+    0%, 100% { background: transparent; }
+    25% { background: rgba(176,149,96,.22); }
+  }
 </style>
 </head>
 <body>
@@ -158,13 +194,36 @@
   </div>
 </div>
 
+<div class="drawer-overlay" id="drawerOverlay" onclick="toggleMenu()"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <span>Зміст</span>
+    <span class="drawer-close" onclick="toggleMenu()" title="Закрити">×</span>
+  </div>
+
+  <div class="drawer-group">Літургія Іоана Золотоустого</div>
+  <a onclick="jumpTo('dod-velyka')">Велика ектенія — додаткові прохання</a>
+  <a onclick="jumpTo('dod-potrijna')">Потрійна ектенія — додаткові прохання</a>
+
+  <div class="drawer-group">Довідник (буде далі)</div>
+  <a class="soon">Прокимни, величання, відпусти</a>
+  <a class="soon">Наука про відпусти</a>
+  <a class="soon">Молитви перед / після Причастя</a>
+
+  <div class="drawer-group">Інші служби (буде далі)</div>
+  <a class="soon">Літургія Василія Великого</a>
+  <a class="soon">Вечірня</a>
+  <a class="soon">Утреня (Рання)</a>
+</aside>
+
 <div class="footer">
   <div class="footer-row">
-    <button class="icon-btn" onclick="toggleSettings()" title="Налаштування">⋮</button>
+    <button class="icon-btn" onclick="toggleSettings()" title="Налаштування">⚙</button>
     <button class="primary" id="btnStart" onclick="toggleListening()">▶ Почати</button>
     <button class="icon-btn" onclick="reset()" title="Спочатку">↺</button>
     <button class="goto-btn" onclick="scrollToCurrent()" title="Прокрутити до підсвіченого місця">↓ Місце<br>зупинки</button>
     <span class="status" id="status">Готово</span>
+    <button class="icon-btn" onclick="toggleMenu()" title="Меню / Зміст">☰</button>
   </div>
   <div class="heard" id="heard"></div>
 </div>
@@ -252,6 +311,7 @@ function render(){
     } else if (block.t === 'fold'){
       const det = document.createElement('details');
       det.className = 'b-fold';
+      if (block.id) det.id = block.id;
       if (block.open) det.open = true;
       const sum = document.createElement('summary');
       sum.textContent = block.text;
@@ -423,6 +483,22 @@ function toggleListening(){ isListening ? stopListening() : startListening(); }
 function reset(){ currentIndex=0; totalProcessedWords=0; updateHighlight(); document.getElementById('heard').textContent=''; }
 function setStatus(m,c){ const s=document.getElementById('status'); s.textContent=m; s.className='status'+(c?' '+c:''); }
 function toggleSettings(){ document.getElementById('settings').classList.toggle('open'); }
+
+function toggleMenu(){
+  document.getElementById('drawer').classList.toggle('open');
+  document.getElementById('drawerOverlay').classList.toggle('open');
+}
+// "Стрибок" з меню: закрити шухляду, розгорнути акордеон, прокрутити до нього, блимнути.
+function jumpTo(id){
+  toggleMenu();
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.open = true;
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+  el.classList.remove('flash-target');
+  void el.offsetWidth;            // перезапуск анімації
+  el.classList.add('flash-target');
+}
 
 document.getElementById('window').addEventListener('input',(e)=>{
   lookAheadWindow=parseInt(e.target.value); document.getElementById('windowOut').textContent=lookAheadWindow;
