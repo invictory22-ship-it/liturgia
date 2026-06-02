@@ -517,11 +517,9 @@ function renderFold(parent, foldBlock, bi){
     if (det.open === foldBlock.open) return;
     foldBlock.open = det.open;
     if (isTrack){
-      // трекований акордеон: перебудувати список слів, зберігши позицію,
-      // і повернути сам акордеон у поле зору (innerHTML перебудовано)
+      // трекований акордеон: перебудувати список слів, зберігши і позицію
+      // трекера, і прокрутку (екран стоїть на місці, вміст розгортається під шапкою)
       rerenderPreserving();
-      const fresh = foldBlock.id && document.getElementById(foldBlock.id);
-      if (fresh) fresh.scrollIntoView({ block: 'start' });
     } else {
       // акордеони обраного — як було: без перемальовування, лиш текст шапки
       setSumText();
@@ -544,6 +542,8 @@ function renderFold(parent, foldBlock, bi){
 // Перемальовуємо сторінку, зберігши позицію трекера за стабільним ключем слова.
 // Викликається при розгортанні/згортанні акордеона (список слів змінюється).
 function rerenderPreserving(){
+  const scroller = document.getElementById('scroll');
+  const savedTop = scroller ? scroller.scrollTop : 0;   // позиція прокрутки ДО перебудови
   // ключі поточного слова й кількох попередніх — на випадок, якщо поточне зникло
   const keys = [];
   for (let k = currentIndex; k >= 0 && k > currentIndex - 5; k--){
@@ -556,7 +556,15 @@ function rerenderPreserving(){
     if (ni >= 0) break;
   }
   currentIndex = ni >= 0 ? ni : Math.min(currentIndex, Math.max(0, trackedWords.length - 1));
-  lastScrolledIndex = currentIndex;   // не смикати екран під час перемальовування
+  lastScrolledIndex = currentIndex;   // не смикати екран авто-прокруткою
+  // повернути прокрутку МИТТЄВО: усе над акордеоном незмінне, тож шапка лишається
+  // на місці, а вміст просто розгортається/згортається під нею — без «стрибка».
+  if (scroller){
+    const prev = scroller.style.scrollBehavior;
+    scroller.style.scrollBehavior = 'auto';
+    scroller.scrollTop = savedTop;
+    scroller.style.scrollBehavior = prev;
+  }
   updateHighlight();
 }
 
