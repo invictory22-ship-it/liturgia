@@ -289,6 +289,11 @@
       <input type="range" id="fontSize" min="20" max="46" value="30">
       <span id="fontOut" style="color:#ddd;">30</span>
     </div>
+    <div class="settings-row" style="margin-top:12px;">
+      <input type="checkbox" id="keepAwake">
+      <label for="keepAwake">Не гасити екран під час служби</label>
+      <span id="keepAwakeNote" style="color:#555;"></span>
+    </div>
   </div>
   <div class="footer-row">
     <button class="icon-btn" onclick="toggleSettings()" title="Налаштування">⚙</button>
@@ -843,6 +848,45 @@ document.getElementById('fontSize').addEventListener('input',(e)=>{
   const v=e.target.value; document.getElementById('fontOut').textContent=v;
   document.querySelectorAll('.saytext').forEach(el=> el.style.fontSize=v+'px');
 });
+
+// --- НЕ ГАСИТИ ЕКРАН (Screen Wake Lock) ---
+// Тримає екран увімкненим під час служби. Памʼятає вибір на пристрої.
+let wakeLock = null, keepAwake = false;
+async function requestWakeLock(){
+  if(!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', ()=>{ wakeLock = null; });
+  } catch(e){ /* браузер міг відмовити (нема жесту/екран схований) — нічого */ }
+}
+async function applyWakeLock(){
+  if(keepAwake && document.visibilityState === 'visible'){
+    if(!wakeLock) await requestWakeLock();
+  } else if(wakeLock){
+    try { await wakeLock.release(); } catch(e){}
+    wakeLock = null;
+  }
+}
+// Система сама знімає блокування, коли вкладка ховається — повертаємо при поверненні.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') applyWakeLock();
+});
+(function(){
+  const cb = document.getElementById('keepAwake');
+  if(!('wakeLock' in navigator)){
+    cb.disabled = true;
+    document.getElementById('keepAwakeNote').textContent = '(браузер не підтримує)';
+    return;
+  }
+  keepAwake = localStorage.getItem('liturgia_keepawake') === '1';
+  cb.checked = keepAwake;
+  applyWakeLock();
+  cb.addEventListener('change', (e)=>{
+    keepAwake = e.target.checked;
+    try { localStorage.setItem('liturgia_keepawake', keepAwake ? '1' : '0'); } catch(e){}
+    applyWakeLock();
+  });
+})();
 
 // Коли отець гортає екран рукою (палець/коліщатко) — авто-прокрутка відступає,
 // щоб можна було вільно подивитись/торкнутись іншої ектенії, коли трекер завис.
