@@ -167,6 +167,21 @@
     color: #9a8a5f; font-size: 14px; font-weight: 600; margin: 16px 0 4px; }
   .fold-favnote { color: #b09560; font-size: 12px; text-transform: uppercase;
     letter-spacing: .05em; margin: 8px 0 4px; }
+  /* «вушко» — золотий ярлик над згорнутим трекованим акордеоном, щоб помітити раніше */
+  .fold-ear {
+    max-width: 680px; margin: 22px 0 0 0;
+    display: flex; align-items: center; gap: 8px;
+    color: #e7c587; font-size: 13.5px; font-weight: 600; letter-spacing: .02em;
+    background: linear-gradient(180deg, #241d10, #16110a);
+    border: 1px solid #6a5526; border-bottom: none;
+    border-radius: 10px 10px 0 0; padding: 8px 16px; cursor: pointer; user-select: none;
+  }
+  .fold-ear::before { content: "✦"; color: #c8902f; font-size: 12px; }
+  .fold-ear .ear-go { margin-left: auto; color: #9a8a5f; font-weight: 400; font-size: 12px; }
+  .fold-ear:hover { background: linear-gradient(180deg, #2c2414, #1a140b); }
+  /* коли є вушко — верх акордеона рівний, щоб зливались в один блок */
+  .b-fold.has-ear { margin-top: 0; }
+  .b-fold.has-ear > summary { border-top-left-radius: 0; border-top-right-radius: 0; border-top-style: solid; }
 
   /* МЕНЮ-ШУХЛЯДА (виїжджає справа) */
   .drawer-overlay {
@@ -542,6 +557,21 @@ function renderFold(parent, foldBlock, bi){
     // 'fav' (трекінг обраних) і звичайні — через buildFoldInner;
     // трекінг обраних умикається всередині нього (коли розгорнуто + повна перебудова)
     buildFoldInner(det, foldBlock);
+  }
+
+  // «вушко» над згорнутим трекованим акордеоном — золотий ярлик, помітніший за
+  // пунктирний рядок; ловить око раніше, тап по ньому теж розгортає
+  if (!foldBlock.open && isTrack){
+    const ear = document.createElement('div');
+    ear.className = 'fold-ear';
+    det.classList.add('has-ear');
+    const lbl = document.createElement('span');
+    lbl.textContent = (foldBlock.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
+    const go = document.createElement('span');
+    go.className = 'ear-go'; go.textContent = 'торкніться, щоб розгорнути ↓';
+    ear.appendChild(lbl); ear.appendChild(go);
+    ear.onclick = () => { det.open = true; };   // відкрити (далі toggle → перебудова з трекінгом)
+    parent.appendChild(ear);
   }
   parent.appendChild(det);
 }
