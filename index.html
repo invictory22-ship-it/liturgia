@@ -111,6 +111,13 @@
     font-size: 11px; line-height: 1.15; padding: 6px 10px; text-align: center;
     color: #aaa;
   }
+  /* індикатор "ти тут" — пігулка над кнопками, у стилі тосту */
+  .section-indicator {
+    align-self: center; max-width: 92%;
+    background: #1c1c1c; color: #c9a96a; border: 1px solid #3a3a3a;
+    padding: 6px 16px; border-radius: 22px; font-size: 13px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .status-row { line-height: 1.3; }
   .status { color: #888; font-size: 12px; }
   .status.listening { color: #ff9933; }
@@ -296,7 +303,7 @@
       <span id="keepAwakeNote" style="color:#555;"></span>
     </div>
   </div>
-  <div class="status-row"><span class="status" id="status">Готово</span></div>
+  <div class="section-indicator" id="sectionIndicator" style="display:none;"></div>
   <div class="footer-row">
     <button class="icon-btn" onclick="toggleSettings()" title="Налаштування">⚙</button>
     <button class="primary" id="btnStart" onclick="toggleListening()">▶ Почати</button>
@@ -304,6 +311,7 @@
     <button class="goto-btn" onclick="scrollToCurrent()" title="Прокрутити до підсвіченого місця">↓ Місце<br>зупинки</button>
     <button class="icon-btn" onclick="toggleMenu()" title="Меню / Зміст" style="margin-left:auto;">☰</button>
   </div>
+  <div class="status-row"><span class="status" id="status">Готово</span></div>
   <div class="heard" id="heard"></div>
 </div>
 
@@ -313,6 +321,7 @@
 let recognition = null, isListening = false;
 let currentIndex = 0;          // index into trackedWords
 let trackedWords = [];         // [{text, normalized, el}]
+let sectionHeaders = [];       // [{el, text}] — заголовки розділів для індикатора "ти тут"
 let lookAheadWindow = 3;
 let totalProcessedWords = 0;
 let soloMode = true;           // "Служу сам": ховає дії диякона, трекає дияконське,
@@ -375,6 +384,7 @@ function render(){
   const scroll = document.getElementById('scroll');
   scroll.innerHTML = '';
   trackedWords = [];
+  sectionHeaders = [];
 
   for (const rawBlock of BLOCKS){
     const block = applySolo(rawBlock);
@@ -387,6 +397,7 @@ function render(){
       const d = document.createElement('div');
       d.className = 'b-header'; d.textContent = block.text;
       scroll.appendChild(d);
+      sectionHeaders.push({ el: d, text: block.text });
     } else if (block.t === 'stage'){
       const d = document.createElement('div');
       d.className = 'b-stage'; d.textContent = block.text;
@@ -477,6 +488,7 @@ function updateHighlight(){
     const cur = trackedWords[currentIndex] && trackedWords[currentIndex].el;
     if (cur){ cur.scrollIntoView({behavior:'smooth', block:'center'}); lastScrolledIndex = currentIndex; }
   }
+  if (typeof updateSectionIndicator === 'function') updateSectionIndicator();
 }
 
 function setPosition(i){
@@ -905,7 +917,34 @@ document.addEventListener('visibilitychange', ()=>{
   sc.addEventListener('touchmove', pause, {passive:true});
 })();
 
+// Індикатор "ти тут": показує розділ, який зараз ВИДНО на екрані (за прокруткою).
+// Це найближчий заголовок розділу, що вже проїхав верх вікна.
+function updateSectionIndicator(){
+  const sc = document.getElementById('scroll');
+  const ind = document.getElementById('sectionIndicator');
+  if(!sc || !ind) return;
+  const r = sc.getBoundingClientRect();
+  const threshold = r.top + r.height * 0.5;   // центр екрана
+  let current = '';
+  for(const h of sectionHeaders){
+    if(h.el.getBoundingClientRect().top <= threshold) current = h.text;
+    else break;   // заголовки в порядку зверху вниз — далі вже нижче порога
+  }
+  ind.textContent = current;
+  ind.style.display = current ? '' : 'none';
+}
+(function(){
+  const sc = document.getElementById('scroll');
+  if(!sc) return;
+  let raf = null;
+  sc.addEventListener('scroll', ()=>{
+    if(raf) return;
+    raf = requestAnimationFrame(()=>{ raf = null; updateSectionIndicator(); });
+  }, {passive:true});
+})();
+
 render();
+updateSectionIndicator();
 </script>
 </body>
 </html>
