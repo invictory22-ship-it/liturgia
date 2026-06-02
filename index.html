@@ -67,6 +67,13 @@
     content: ""; flex: 0 1 40px; height: 1px; background: #4a3f2a;
   }
   .b-header span { text-align: center; min-width: 0; }
+  /* IMAGE (схема/ілюстрація) */
+  .b-image { margin: 28px auto; max-width: 380px; text-align: center; }
+  .b-image img {
+    width: 100%; height: auto; background: #f4efe3;
+    border-radius: 14px; padding: 16px;
+  }
+  .b-image-cap { color: #6a6a6a; font-size: 13px; font-style: italic; margin-top: 8px; }
   /* STAGE DIRECTION */
   .b-stage {
     color: #5a5a5a; font-size: 15px; font-style: italic; line-height: 1.45;
@@ -441,6 +448,18 @@ function render(){
       });
       buildFoldInner(det, block);
       scroll.appendChild(det);
+    } else if (block.t === 'image'){
+      const fig = document.createElement('div');
+      fig.className = 'b-image';
+      const img = document.createElement('img');
+      img.src = block.src; img.alt = block.alt || ''; img.loading = 'lazy';
+      fig.appendChild(img);
+      if (block.caption){
+        const cap = document.createElement('div');
+        cap.className = 'b-image-cap'; cap.textContent = block.caption;
+        fig.appendChild(cap);
+      }
+      scroll.appendChild(fig);
     } else if (block.t === 'say'){
       sayBlk++;                       // номер цього мовленнєвого блоку (молитви/ектенії)
       const wrap = document.createElement('div');
