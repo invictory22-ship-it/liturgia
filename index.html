@@ -582,7 +582,23 @@ function syncPosition(){
   if(currentIndex >= tw.length) return;
   const probe = heardBuffer.slice(-PROBE_LEN);
   if(!probe.length) return;
+  const newest = probe[probe.length-1];
 
+  // ── ШВИДКИЙ ШЛЯХ (звичайне читання) — миттєвий крок, без порогу й контексту.
+  //    Це лікує застрягання на останньому слові молитви та на коротких блоках.
+  if(newest){
+    // почуте = ПОТОЧНЕ слово → крок на 1 (навіть коротке: лише точний збіг його не зрушить дарма)
+    if(wordMatches(newest, tw[currentIndex].normalized)){ currentIndex++; return; }
+    if(currentIndex+1 < tw.length){
+      // склейка "на віки"->"навіки"
+      if(newest === tw[currentIndex].normalized + tw[currentIndex+1].normalized){ currentIndex += 2; return; }
+      // пропущене одне слово: почуте = НАСТУПНЕ (лише довге, щоб не плутати короткі) → крок на 2
+      if(tw[currentIndex+1].normalized.length >= 4 && wordMatches(newest, tw[currentIndex+1].normalized)){ currentIndex += 2; return; }
+    }
+  }
+
+  // ── ПОВІЛЬНИЙ ШЛЯХ (ресинхронізація після збою): вирівнювання по вікну з порогом
+  //    і "стоянням при неоднозначності". Лише в межах блоку + місток.
   // СТІНА + МІСТОК: верхня межа пошуку = кінець поточної молитви; якщо ми вже
   // близько до кінця — дозволяємо зазирнути на початок наступної молитви.
   const curBlk = tw[currentIndex].blk;
