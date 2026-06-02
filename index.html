@@ -59,14 +59,14 @@
   }
   /* SECTION HEADER */
   .b-header {
-    text-align: center; color: #8a7a55; font-size: 17px; font-weight: 500;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    color: #8a7a55; font-size: 17px; font-weight: 500;
     margin: 40px 0 24px; text-transform: uppercase; letter-spacing: 0.08em;
-    position: relative;
   }
   .b-header::before, .b-header::after {
-    content: ""; display: inline-block; width: 40px; height: 1px;
-    background: #4a3f2a; vertical-align: middle; margin: 0 14px;
+    content: ""; flex: 0 1 40px; height: 1px; background: #4a3f2a;
   }
+  .b-header span { text-align: center; min-width: 0; }
   /* STAGE DIRECTION */
   .b-stage {
     color: #5a5a5a; font-size: 15px; font-style: italic; line-height: 1.45;
@@ -395,7 +395,9 @@ function render(){
       scroll.appendChild(d);
     } else if (block.t === 'header'){
       const d = document.createElement('div');
-      d.className = 'b-header'; d.textContent = block.text;
+      d.className = 'b-header';
+      const sp = document.createElement('span'); sp.textContent = block.text;
+      d.appendChild(sp);
       scroll.appendChild(d);
       sectionHeaders.push({ el: d, text: block.text });
     } else if (block.t === 'stage'){
