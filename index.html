@@ -111,12 +111,21 @@
     font-size: 11px; line-height: 1.15; padding: 6px 10px; text-align: center;
     color: #aaa;
   }
-  /* індикатор "ти тут" — пігулка над кнопками, у стилі тосту */
-  .section-indicator {
-    align-self: center; max-width: 92%;
-    background: #1c1c1c; color: #c9a96a; border: 1px solid #3a3a3a;
-    padding: 6px 16px; border-radius: 22px; font-size: 13px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* галерея розділів "ти тут" — горизонтальна стрічка над кнопками */
+  .section-strip {
+    display: flex; gap: 8px; overflow-x: auto; scroll-behavior: smooth;
+    padding: 2px 42vw; align-self: stretch;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .section-strip::-webkit-scrollbar { display: none; }
+  .sec-chip {
+    flex: 0 0 auto; white-space: nowrap; font-size: 13px; color: #5a5a5a;
+    padding: 6px 14px; border-radius: 22px; border: 1px solid transparent;
+    cursor: pointer; user-select: none;
+    transition: color .2s, background .2s, border-color .2s;
+  }
+  .sec-chip.active {
+    color: #c9a96a; background: #1c1c1c; border-color: #3a3a3a; font-weight: 500;
   }
   .status-row { line-height: 1.3; }
   .status { color: #888; font-size: 12px; }
@@ -303,7 +312,7 @@
       <span id="keepAwakeNote" style="color:#555;"></span>
     </div>
   </div>
-  <div class="section-indicator" id="sectionIndicator" style="display:none;"></div>
+  <div class="section-strip" id="sectionStrip"></div>
   <div class="footer-row">
     <button class="icon-btn" onclick="toggleSettings()" title="Налаштування">⚙</button>
     <button class="primary" id="btnStart" onclick="toggleListening()">▶ Почати</button>
@@ -475,6 +484,7 @@ function render(){
       scroll.appendChild(wrap);
     }
   }
+  buildSectionStrip();
   updateHighlight();
 }
 
@@ -919,21 +929,48 @@ document.addEventListener('visibilitychange', ()=>{
   sc.addEventListener('touchmove', pause, {passive:true});
 })();
 
-// Індикатор "ти тут": показує розділ, який зараз ВИДНО на екрані (за прокруткою).
-// Це найближчий заголовок розділу, що вже проїхав верх вікна.
+// ГАЛЕРЕЯ РОЗДІЛІВ "ти тут": горизонтальна стрічка; активний (по центру екрана) —
+// золотий, сусіди приглушені; тап по розділу = стрибок туди (перегляд, не зсув позиції).
+let activeSectionIdx = -1;
+function buildSectionStrip(){
+  const strip = document.getElementById('sectionStrip');
+  if(!strip) return;
+  strip.innerHTML = '';
+  activeSectionIdx = -1;
+  sectionHeaders.forEach((h, i) => {
+    const c = document.createElement('span');
+    c.className = 'sec-chip'; c.textContent = h.text;
+    c.onclick = () => {
+      userScrollPauseUntil = Date.now() + SCROLL_PAUSE_MS;   // дати спокійно подивитись
+      h.el.scrollIntoView({ behavior:'smooth', block:'start' });
+    };
+    strip.appendChild(c);
+  });
+}
+function centerChip(i){
+  const strip = document.getElementById('sectionStrip');
+  const chip = strip && strip.children[i];
+  if(!chip) return;
+  const sr = strip.getBoundingClientRect(), cr = chip.getBoundingClientRect();
+  const target = strip.scrollLeft + (cr.left - sr.left) - (strip.clientWidth - chip.clientWidth) / 2;
+  strip.scrollTo({ left: target, behavior:'smooth' });
+}
 function updateSectionIndicator(){
   const sc = document.getElementById('scroll');
-  const ind = document.getElementById('sectionIndicator');
-  if(!sc || !ind) return;
+  const strip = document.getElementById('sectionStrip');
+  if(!sc || !strip) return;
   const r = sc.getBoundingClientRect();
   const threshold = r.top + r.height * 0.5;   // центр екрана
-  let current = '';
-  for(const h of sectionHeaders){
-    if(h.el.getBoundingClientRect().top <= threshold) current = h.text;
-    else break;   // заголовки в порядку зверху вниз — далі вже нижче порога
+  let idx = -1;
+  for(let i = 0; i < sectionHeaders.length; i++){
+    if(sectionHeaders[i].el.getBoundingClientRect().top <= threshold) idx = i;
+    else break;   // заголовки в порядку зверху вниз
   }
-  ind.textContent = current;
-  ind.style.display = current ? '' : 'none';
+  if(idx === activeSectionIdx) return;        // активний розділ не змінився
+  activeSectionIdx = idx;
+  const chips = strip.children;
+  for(let i = 0; i < chips.length; i++) chips[i].classList.toggle('active', i === idx);
+  if(idx >= 0) centerChip(idx);
 }
 (function(){
   const sc = document.getElementById('scroll');
