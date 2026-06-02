@@ -1036,7 +1036,7 @@ function updateSectionIndicator(){
   const strip = document.getElementById('sectionStrip');
   if(!sc || !strip) return;
   const r = sc.getBoundingClientRect();
-  const threshold = r.top + r.height * 0.35;  // ~верхня третина екрана
+  const threshold = r.top + r.height * 0.60;  // лінія на 40% від НИЗУ екрана
   let idx = -1;
   for(let i = 0; i < sectionHeaders.length; i++){
     if(sectionHeaders[i].el.getBoundingClientRect().top <= threshold) idx = i;
