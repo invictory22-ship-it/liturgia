@@ -559,6 +559,10 @@ function appendBlock(parent, block, path){
   }
 }
 
+// Де було вушко акордеона (від верху екрана) в мить, коли його розгорнули —
+// щоб при ЗАКРИТТІ повернути акордеон точно на те саме місце. Ключ — id акордеона.
+let foldOpenY = {};
+
 // Малює акордеон. Якщо він РОЗГОРНУТИЙ і має trackMode:"all" — його вміст
 // малюється звичайними блоками (молитви великі й ТРЕКАЮТЬСЯ); інакше — як було
 // (buildFoldInner: дрібний сірий вміст, обрані прохання вгорі).
@@ -627,7 +631,12 @@ function renderFold(parent, foldBlock, bi){
     det.classList.add('has-ear');
     // той самий формат, що й відкрита смуга: НАЗВА (жирна) + світла дія — в один рядок
     ear.innerHTML = foldName + '<span class="fold-act"> · розгорнути ↓</span>';
-    ear.onclick = () => { det.open = true; };   // відкрити (далі toggle → перебудова з трекінгом)
+    ear.onclick = () => {
+      // запам'ятати, де зараз вушко на екрані — щоб закрити рівно сюди ж
+      const sc = document.getElementById('scroll');
+      if (sc) foldOpenY[foldBlock.id] = ear.getBoundingClientRect().top - sc.getBoundingClientRect().top;
+      det.open = true;   // відкрити (далі toggle → перебудова з трекінгом)
+    };
     parent.appendChild(ear);
   }
   // акордеон може зʼявлятись у галереї розділів (за міткою section), без окремого заголовка
@@ -689,12 +698,13 @@ function rerenderPreserving(anchorId, isOpening){
       }
     } else {
       // ЗАКРИТТЯ: браузер уже згорнув <details> до нашого коду (і міг «обрізати» прокрутку).
-      // Тому ПРИМУСОВО ставимо згорнутий акордеон (вушко) під верх із відступом — детерміновано,
-      // ніколи не вилітає за межі.
+      // ПРИМУСОВО ставимо згорнутий акордеон (вушко) ТУДИ, де воно було в мить розгортання
+      // (запам'ятали у foldOpenY) — тобто «закриваємо на тому ж місці». Як запасне — 40px від верху.
       const hdr2 = foldHeaderEl(anchorId);
+      const targetY = (foldOpenY[anchorId] != null) ? foldOpenY[anchorId] : 40;
       if (hdr2){
         const cur = hdr2.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-        scroller.scrollTop += (cur - 40);
+        scroller.scrollTop += (cur - targetY);
       } else {
         scroller.scrollTop = savedTop;
       }
