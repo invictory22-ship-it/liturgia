@@ -240,6 +240,9 @@
     margin: 12px -16px 0 -16px; border: none; border-top: 1px dashed #3a3320;
     border-radius: 0 0 9px 9px;
   }
+  .b-fold.reg-fold[open] .b-stage {             /* рамка вже окреслює межі — ліва смужка ремарки зайва */
+    border-left-color: transparent; padding-left: 0;
+  }
   /* липка смуга «згорнути» над футером — зʼявляється ЛИШЕ коли верхня шапка пішла з екрана.
      Та сама форма/ширина, що й нижня смуга рамки (left/width задаються в JS за акордеоном). */
   .sticky-close {
@@ -621,13 +624,15 @@ function renderFold(parent, foldBlock, bi){
   if (!isTrack) det.classList.add('reg-fold');     // пунктирна рамка через CSS [open]
   const foldKey = foldBlock.id || ('reg-' + bi);   // ключ для foldOpenY (закрити «на місці»)
   const foldName = (foldBlock.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
+  // назва звичайного акордеона для єдиних написів «<назва> — розгорнути/згорнути»
+  const regName = foldBlock.name || foldBlock.text;
   const setSumText = () => {
     // трекований: у золотій смузі НАЗВА (жирна) + дія «торкніться…» (світла, не жирна — як у вушку)
     if (isTrack){
       if (det.open) sum.innerHTML = foldName + '<span class="fold-act"> · згорнути ↑</span>';
       else sum.textContent = foldBlock.text;
     }
-    else sum.textContent = det.open ? 'Торкніться, щоб згорнути' : foldBlock.text;
+    else sum.innerHTML = regName + '<span class="fold-act"> — ' + (det.open ? 'згорнути ↑' : 'розгорнути ↓') + '</span>';
   };
   setSumText();
 
@@ -691,7 +696,7 @@ function renderFold(parent, foldBlock, bi){
   if (!isTrack){
     const closeP = document.createElement('div');
     closeP.className = 'fold-close-plain';
-    closeP.textContent = 'Згорнути ↑';
+    closeP.innerHTML = regName + '<span class="fold-act"> — згорнути ↑</span>';
     closeP.onclick = () => { det.open = false; };   // toggle сам поверне «на місце»
     det.appendChild(closeP);
   }
