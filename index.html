@@ -48,6 +48,7 @@
 
   .scroll {
     flex: 1; overflow-y: auto; scroll-behavior: smooth;
+    overflow-anchor: none;        /* не дати браузеру самому смикати прокрутку при перебудові */
     padding: 40px 8vw 60vh;
   }
 
@@ -179,9 +180,46 @@
   .fold-ear::before { content: "✦"; color: #c8902f; font-size: 12px; }
   .fold-ear .ear-go { margin-left: auto; color: #9a8a5f; font-weight: 400; font-size: 12px; }
   .fold-ear:hover { background: linear-gradient(180deg, #2c2414, #1a140b); }
-  /* коли є вушко — верх акордеона рівний, щоб зливались в один блок */
+  /* коли є вушко — золоте вушко і Є шапкою; стара пунктирна шапка ховається (без дубля) */
   .b-fold.has-ear { margin-top: 0; }
-  .b-fold.has-ear > summary { border-top-left-radius: 0; border-top-right-radius: 0; border-top-style: solid; }
+  .b-fold.has-ear > summary { display: none; }
+
+  /* РОЗГОРНУТИЙ трекований акордеон = обмежена картка з рамкою по боках */
+  .b-fold[open].framed {
+    border: 1px solid #5a4a28; border-radius: 10px;
+    background: #110e07; padding: 0 16px; margin: 0 0 22px 0;
+  }
+  .b-fold[open].framed > summary {        /* верхня золота смуга, БЕЗ залипання */
+    position: static; margin: 0 -16px 12px -16px;
+    border: none; border-bottom: 1px solid #5a4a28; border-radius: 9px 9px 0 0;
+    background: linear-gradient(180deg, #241d10, #16110a);
+    color: #e7c587; font-style: normal; font-weight: 600; font-size: 13.5px; padding: 9px 16px;
+  }
+  .b-fold[open].framed > summary::before { content: "✦ "; color: #c8902f; font-size: 12px; }
+  .b-fold[open].framed .b-stage { border-left-color: transparent; }  /* рамка вже окреслює межі */
+  /* нижній золотий ярлик «згорнути» — закриває рамку знизу, симетрично до верху */
+  /* нижня смуга рамки — у самому кінці блоку (закриває рамку знизу) */
+  .fold-close {
+    margin: 14px -16px 0 -16px; border-top: 1px solid #5a4a28; border-radius: 0 0 9px 9px;
+    background: linear-gradient(180deg, #16110a, #241d10);
+    color: #e7c587; font-weight: 600; font-size: 13.5px;
+    padding: 10px 16px; text-align: center; cursor: pointer; user-select: none;
+  }
+  .fold-close::before { content: "✦ "; color: #c8902f; font-size: 12px; }
+  .fold-close:hover { background: linear-gradient(180deg, #1a140b, #2c2414); }
+  /* липка смуга «згорнути» над футером — зʼявляється ЛИШЕ коли верхня шапка пішла з екрана */
+  .sticky-close {
+    position: fixed; left: 0; right: 0; z-index: 44; display: none;
+    background: linear-gradient(180deg, #16110a, #2a2113); border-top: 1px solid #6a5526;
+    color: #e7c587; font-weight: 600; font-size: 13.5px;
+    padding: 11px 16px; text-align: center; cursor: pointer; user-select: none;
+    box-shadow: 0 -6px 16px rgba(0,0,0,.5);
+  }
+  .sticky-close.show { display: block; }
+  .sticky-close::before { content: "✦ "; color: #c8902f; font-size: 12px; }
+  /* підказка про обране всередині акордеона */
+  .fold-hint { color: #8a8a8a; font-size: 12.5px; line-height: 1.5; margin: 2px 0 12px; }
+  .fold-hint .x { color: #e0b94e; }
 
   /* МЕНЮ-ШУХЛЯДА (виїжджає справа) */
   .drawer-overlay {
@@ -270,6 +308,7 @@
 <body>
 
 <div class="scroll" id="scroll"></div>
+<div id="stickyClose" class="sticky-close" onclick="closeOpenFold()"></div>
 
 <div class="drawer-overlay" id="drawerOverlay" onclick="toggleMenu()"></div>
 <aside class="drawer" id="drawer">
@@ -429,7 +468,7 @@ function render(skipHL){
 
   renderingFull = false;
   buildSectionStrip();
-  if (!skipHL) updateHighlight();
+  if (!skipHL){ updateHighlight(); updateStickyClose(); }
 }
 
 // Малює ОДИН блок (крім fold) у parent. path — стабільний шлях блоку
@@ -528,7 +567,12 @@ function renderFold(parent, foldBlock, bi){
   det.appendChild(sum);
   const tm = foldBlock.trackMode;                  // 'all' (вся ектенія) | 'fav' (лише обрані) | undefined
   const isTrack = tm === 'all' || tm === 'fav';
-  const setSumText = () => { sum.textContent = det.open ? 'Торкніться, щоб згорнути' : foldBlock.text; };
+  const foldName = (foldBlock.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
+  const setSumText = () => {
+    // трекований: у золотій смузі завжди НАЗВА + дія (відкрити/закрити); звичайний — як у даних
+    if (isTrack) sum.textContent = det.open ? (foldName + ' · торкніться, щоб згорнути ↑') : foldBlock.text;
+    else sum.textContent = det.open ? 'Торкніться, щоб згорнути' : foldBlock.text;
+  };
   setSumText();
 
   det.addEventListener('toggle', () => {
@@ -560,6 +604,16 @@ function renderFold(parent, foldBlock, bi){
     buildFoldInner(det, foldBlock);
   }
 
+  // розгорнутий трекований акордеон — обмежена картка з рамкою + нижній ярлик «згорнути»
+  if (foldBlock.open && isTrack){
+    det.classList.add('framed');
+    const close = document.createElement('div');
+    close.className = 'fold-close';
+    close.textContent = foldName + ' · торкніться, щоб згорнути ↑';
+    close.onclick = () => { det.open = false; };
+    det.appendChild(close);
+  }
+
   // «вушко» над згорнутим трекованим акордеоном — золотий ярлик, помітніший за
   // пунктирний рядок; ловить око раніше, тап по ньому теж розгортає
   if (!foldBlock.open && isTrack){
@@ -567,31 +621,42 @@ function renderFold(parent, foldBlock, bi){
     ear.className = 'fold-ear';
     det.classList.add('has-ear');
     const lbl = document.createElement('span');
-    lbl.textContent = (foldBlock.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
+    lbl.textContent = foldName;
     const go = document.createElement('span');
     go.className = 'ear-go'; go.textContent = 'торкніться, щоб розгорнути ↓';
     ear.appendChild(lbl); ear.appendChild(go);
     ear.onclick = () => { det.open = true; };   // відкрити (далі toggle → перебудова з трекінгом)
     parent.appendChild(ear);
   }
+  // акордеон може зʼявлятись у галереї розділів (за міткою section), без окремого заголовка
+  if (foldBlock.section) sectionHeaders.push({ el: det, text: foldBlock.section });
   parent.appendChild(det);
+}
+
+// Видима «шапка» акордеона: коли закрито — золоте вушко (сусід перед <details>),
+// коли відкрито — золота смуга-summary. Саме її тримаємо на місці при перебудові.
+function foldHeaderEl(id){
+  const det = document.getElementById(id);
+  if (!det) return null;
+  const ear = det.previousElementSibling;
+  if (ear && ear.classList && ear.classList.contains('fold-ear')) return ear;
+  return det.querySelector('summary');
 }
 
 // Перемальовуємо сторінку, зберігши позицію трекера за стабільним ключем слова.
 // Викликається при розгортанні/згортанні акордеона (список слів змінюється).
-// anchorId — id акордеона, чию ШАПКУ тримати на тій самій висоті екрана. Це важливо
-// при ЗГОРТАННІ після глибокої прокрутки: інакше числова прокрутка опинялась би далеко
-// нижче (бо висота над нею різко зменшилась) і сторінку «викидало» наперед.
+// anchorId — id акордеона, чию ВИДИМУ шапку тримати на тій самій висоті екрана. Це
+// важливо при ЗГОРТАННІ після глибокої прокрутки: інакше числова прокрутка опинялась би
+// далеко нижче (бо висота над нею різко зменшилась) і сторінку «викидало» наперед.
 function rerenderPreserving(anchorId){
   const scroller = document.getElementById('scroll');
   const sTopBefore = scroller ? scroller.getBoundingClientRect().top : 0;
   const savedTop = scroller ? scroller.scrollTop : 0;   // запасний варіант (без якоря)
-  // де зараз шапка акордеона-якоря на екрані (від верху контейнера)
+  // де зараз ВИДИМА шапка акордеона-якоря на екрані (від верху контейнера)
   let anchorViewport = null;
   if (anchorId && scroller){
-    const a = document.getElementById(anchorId);
-    const sum = a && a.querySelector('summary');
-    if (sum) anchorViewport = Math.max(0, sum.getBoundingClientRect().top - sTopBefore);
+    const hdr = foldHeaderEl(anchorId);
+    if (hdr) anchorViewport = Math.max(0, hdr.getBoundingClientRect().top - sTopBefore);
   }
   // ключі поточного слова й кількох попередніх — на випадок, якщо поточне зникло
   const keys = [];
@@ -610,12 +675,13 @@ function rerenderPreserving(anchorId){
     const prev = scroller.style.scrollBehavior;
     scroller.style.scrollBehavior = 'auto';
     if (anchorViewport != null){
-      // поставити шапку акордеона рівно туди, де вона була на екрані (scrollTop зараз 0)
-      const a2 = document.getElementById(anchorId);
-      const sum2 = a2 && a2.querySelector('summary');
-      if (sum2){
-        const cur = sum2.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-        scroller.scrollTop = cur - anchorViewport;
+      // поставити ВИДИМУ шапку акордеона туди, де вона була на екрані
+      const hdr2 = foldHeaderEl(anchorId);
+      if (hdr2){
+        // ВІДНОСНИЙ зсув (не абсолютний): пересунути шапку з поточної висоти на ту,
+        // де вона була. Працює навіть якщо браузер сам підправив scrollTop при перебудові.
+        const cur = hdr2.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        scroller.scrollTop += (cur - anchorViewport);
       } else {
         scroller.scrollTop = savedTop;
       }
@@ -625,6 +691,37 @@ function rerenderPreserving(anchorId){
     scroller.style.scrollBehavior = prev;
   }
   updateHighlight();
+  updateStickyClose();
+}
+
+// Згорнути відкритий трекований акордеон (липка смуга над футером).
+function closeOpenFold(){
+  const b = BLOCKS.find(x => x.t === 'fold' && x.open && x.trackMode);
+  if (b){ b.open = false; rerenderPreserving(b.id); }
+}
+
+// Липка смуга «згорнути» над футером зʼявляється ЛИШЕ коли верхня шапка відкритого
+// акордеона пішла за верх екрана, а нижня смуга ще не видна (довгий блок / мобільний).
+function updateStickyClose(){
+  const sticky = document.getElementById('stickyClose');
+  if (!sticky) return;
+  const b = BLOCKS.find(x => x.t === 'fold' && x.open && x.trackMode);
+  const scroller = document.getElementById('scroll');
+  if (!b || !scroller){ sticky.classList.remove('show'); return; }
+  const top = foldHeaderEl(b.id);
+  const det = document.getElementById(b.id);
+  const bottom = det && det.querySelector('.fold-close');
+  const sr = scroller.getBoundingClientRect();
+  const topGone = top ? (top.getBoundingClientRect().bottom <= sr.top + 4) : false;
+  const bottomVisible = bottom ? (bottom.getBoundingClientRect().top <= sr.bottom - 4) : false;
+  if (topGone && !bottomVisible){
+    const name = (b.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
+    sticky.textContent = name + ' · торкніться, щоб згорнути ↑';
+    sticky.style.bottom = Math.max(0, window.innerHeight - sr.bottom) + 'px';
+    sticky.classList.add('show');
+  } else {
+    sticky.classList.remove('show');
+  }
 }
 
 function updateHighlight(){
@@ -931,6 +1028,14 @@ function buildFoldInner(det, foldBlock){
   det.innerHTML = '';
   if (sum) det.appendChild(sum);
 
+  // підказка про обране (як у Довіднику): пояснити, що робить хрест ✠
+  if (foldBlock.open && foldBlock.trackMode === 'fav'){
+    const hint = document.createElement('div');
+    hint.className = 'fold-hint';
+    hint.innerHTML = 'Торкніться <span class="x">✠</span> біля прохання — воно стане обраним: підніметься вгору й трекатиметься.';
+    det.appendChild(hint);
+  }
+
   const groups = groupPetitions(foldBlock.blocks);
   const favG  = groups.filter(g => g.header && isFav(g.header.text.trim()));
   // обрані прохання трекаються лише коли акордеон РОЗГОРНУТИЙ і це повна перебудова
@@ -1197,7 +1302,7 @@ function updateSectionIndicator(){
   let raf = null;
   sc.addEventListener('scroll', ()=>{
     if(raf) return;
-    raf = requestAnimationFrame(()=>{ raf = null; updateSectionIndicator(); });
+    raf = requestAnimationFrame(()=>{ raf = null; updateSectionIndicator(); updateStickyClose(); });
   }, {passive:true});
 })();
 

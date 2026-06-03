@@ -153,6 +153,7 @@ const BLOCKS = [
   "t": "fold",
   "id": "dod-velyka",
   "text": "Тут бувають додаткові прохання. Торкнись, щоб розгорнути.",
+  "section": "Додаткові прохання",
   "open": false,
   "trackMode": "fav",
   "blocks": [
@@ -926,6 +927,7 @@ const BLOCKS = [
   "t": "fold",
   "id": "dod-potrijna",
   "text": "Тут бувають додаткові прохання. Торкнись, щоб розгорнути.",
+  "section": "Додаткові прохання",
   "open": false,
   "trackMode": "fav",
   "blocks": [
