@@ -100,7 +100,7 @@
     display: block; text-align: center; color: #6a6a6a; font-size: 13px;
     font-style: italic; letter-spacing: 0.04em; margin-bottom: 6px;
   }
-  .b-prayer .ptext { font-size: var(--say-fs, 30px); line-height: 1.5; color: #d8d8d8; }
+  .b-prayer .ptext { font-size: var(--say-fs, 30px); line-height: 1.5; color: #f0f0f0; }
   .word { color: #f0f0f0; transition: color .2s, background-color .2s; cursor: pointer; border-radius: 4px; padding: 0 2px; }
   .word:hover { background: rgba(255,255,255,.06); }
   .word.said { color: #9a9a9a; }
@@ -566,9 +566,11 @@ function appendBlock(parent, block, path){
   } else if (block.t === 'prayer'){
     const wrap = document.createElement('div');
     wrap.className = 'b-prayer';
-    const lbl = document.createElement('div');
-    lbl.className = 'lbl'; lbl.textContent = block.label || 'Молитва';
-    wrap.appendChild(lbl);
+    if (block.label){
+      const lbl = document.createElement('div');
+      lbl.className = 'lbl'; lbl.textContent = block.label;
+      wrap.appendChild(lbl);
+    }
     const txt = document.createElement('div');
     txt.className = 'ptext'; txt.textContent = block.text;
     wrap.appendChild(txt);
