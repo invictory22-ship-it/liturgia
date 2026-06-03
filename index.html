@@ -537,9 +537,10 @@ function renderFold(parent, foldBlock, bi){
     if (det.open === foldBlock.open) return;
     foldBlock.open = det.open;
     if (isTrack){
-      // трекований акордеон: перебудувати список слів, зберігши і позицію
-      // трекера, і прокрутку (екран стоїть на місці, вміст розгортається під шапкою)
-      rerenderPreserving();
+      // трекований акордеон: перебудувати список слів, зберігши позицію трекера;
+      // шапку акордеона тримаємо на тій самій висоті екрана (anchorId) — щоб при
+      // згортанні після прокрутки сторінку не викидало наперед
+      rerenderPreserving(foldBlock.id);
     } else {
       // звичайні акордеони — як було: без перемальовування, лиш текст шапки
       setSumText();
@@ -578,9 +579,20 @@ function renderFold(parent, foldBlock, bi){
 
 // Перемальовуємо сторінку, зберігши позицію трекера за стабільним ключем слова.
 // Викликається при розгортанні/згортанні акордеона (список слів змінюється).
-function rerenderPreserving(){
+// anchorId — id акордеона, чию ШАПКУ тримати на тій самій висоті екрана. Це важливо
+// при ЗГОРТАННІ після глибокої прокрутки: інакше числова прокрутка опинялась би далеко
+// нижче (бо висота над нею різко зменшилась) і сторінку «викидало» наперед.
+function rerenderPreserving(anchorId){
   const scroller = document.getElementById('scroll');
-  const savedTop = scroller ? scroller.scrollTop : 0;   // позиція прокрутки ДО перебудови
+  const sTopBefore = scroller ? scroller.getBoundingClientRect().top : 0;
+  const savedTop = scroller ? scroller.scrollTop : 0;   // запасний варіант (без якоря)
+  // де зараз шапка акордеона-якоря на екрані (від верху контейнера)
+  let anchorViewport = null;
+  if (anchorId && scroller){
+    const a = document.getElementById(anchorId);
+    const sum = a && a.querySelector('summary');
+    if (sum) anchorViewport = Math.max(0, sum.getBoundingClientRect().top - sTopBefore);
+  }
   // ключі поточного слова й кількох попередніх — на випадок, якщо поточне зникло
   const keys = [];
   for (let k = currentIndex; k >= 0 && k > currentIndex - 5; k--){
@@ -594,12 +606,22 @@ function rerenderPreserving(){
   }
   currentIndex = ni >= 0 ? ni : Math.min(currentIndex, Math.max(0, trackedWords.length - 1));
   lastScrolledIndex = currentIndex;   // не смикати екран авто-прокруткою
-  // повернути прокрутку МИТТЄВО: усе над акордеоном незмінне, тож шапка лишається
-  // на місці, а вміст просто розгортається/згортається під нею — без «стрибка».
   if (scroller){
     const prev = scroller.style.scrollBehavior;
     scroller.style.scrollBehavior = 'auto';
-    scroller.scrollTop = savedTop;
+    if (anchorViewport != null){
+      // поставити шапку акордеона рівно туди, де вона була на екрані (scrollTop зараз 0)
+      const a2 = document.getElementById(anchorId);
+      const sum2 = a2 && a2.querySelector('summary');
+      if (sum2){
+        const cur = sum2.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        scroller.scrollTop = cur - anchorViewport;
+      } else {
+        scroller.scrollTop = savedTop;
+      }
+    } else {
+      scroller.scrollTop = savedTop;   // усе над акордеоном незмінне — числова прокрутка ок
+    }
     scroller.style.scrollBehavior = prev;
   }
   updateHighlight();
