@@ -738,7 +738,7 @@ function updateStickyClose(){
   }
   if (target){
     const name = (target.b.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
-    sticky.textContent = name + ' · торкніться, щоб згорнути ↑';
+    sticky.innerHTML = name + '<span class="fold-act"> · торкніться, щоб згорнути ↑</span>';
     // та сама ширина/позиція по горизонталі, що й сам акордеон (рамка) — однакова форма
     sticky.style.left = target.dr.left + 'px';
     sticky.style.width = target.dr.width + 'px';
