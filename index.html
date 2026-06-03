@@ -662,13 +662,6 @@ function rerenderPreserving(anchorId, isOpening){
     const hdr = foldHeaderEl(anchorId);
     if (hdr) anchorViewport = Math.max(0, hdr.getBoundingClientRect().top - sTopBefore);
   }
-  // для ЗАКРИТТЯ — де зараз контент ОДРАЗУ ПІСЛЯ акордеона (щоб тримати його на місці, без «вильоту»)
-  let afterTop = null;
-  if (anchorId && scroller){
-    const det0 = document.getElementById(anchorId);
-    const a0 = det0 && det0.nextElementSibling;
-    if (a0) afterTop = a0.getBoundingClientRect().top - sTopBefore;
-  }
   // ключі поточного слова й кількох попередніх — на випадок, якщо поточне зникло
   const keys = [];
   for (let k = currentIndex; k >= 0 && k > currentIndex - 5; k--){
@@ -697,12 +690,13 @@ function rerenderPreserving(anchorId, isOpening){
         scroller.scrollTop = savedTop;
       }
     } else {
-      // ЗАКРИТТЯ: тримаємо контент ПІСЛЯ акордеона там, де він був — не «вилітаємо»
-      const det2 = document.getElementById(anchorId);
-      const a2 = det2 && det2.nextElementSibling;
-      if (a2 && afterTop != null){
-        const cur = a2.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-        scroller.scrollTop += (cur - afterTop);
+      // ЗАКРИТТЯ: браузер уже згорнув <details> до нашого коду (і міг «обрізати» прокрутку).
+      // Тому ПРИМУСОВО ставимо згорнутий акордеон (вушко) під верх із відступом — детерміновано,
+      // ніколи не вилітає за межі.
+      const hdr2 = foldHeaderEl(anchorId);
+      if (hdr2){
+        const cur = hdr2.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        scroller.scrollTop += (cur - 40);
       } else {
         scroller.scrollTop = savedTop;
       }
