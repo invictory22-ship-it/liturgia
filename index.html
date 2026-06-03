@@ -216,6 +216,15 @@
   }
   .fold-close::before { content: "✦ "; color: #c8902f; font-size: 12px; }
   .fold-close:hover { background: linear-gradient(180deg, #1a140b, #2c2414); }
+  /* нижня липучка «згорнути» для ЗВИЧАЙНИХ (нетрекованих) акордеонів — у їхньому сірому стилі */
+  .fold-close-plain {
+    max-width: 680px; margin: 12px 0 0 0;
+    color: #9a8a5f; font-size: 13.5px; font-style: italic;
+    border: 1px dashed #3a3320; border-radius: 8px;
+    padding: 9px 14px; text-align: center; cursor: pointer; user-select: none;
+  }
+  .fold-close-plain::before { content: "\25be "; color: #6a5f3a; }
+  .fold-close-plain:hover { background: #141414; }
   /* липка смуга «згорнути» над футером — зʼявляється ЛИШЕ коли верхня шапка пішла з екрана.
      Та сама форма/ширина, що й нижня смуга рамки (left/width задаються в JS за акордеоном). */
   .sticky-close {
@@ -640,6 +649,26 @@ function renderFold(parent, foldBlock, bi){
     close.innerHTML = foldName + '<span class="fold-act"> · згорнути ↑</span>';
     close.onclick = () => { det.open = false; };
     det.appendChild(close);
+  }
+
+  // звичайний (нетрекований) розгорнутий акордеон — нижня липучка «згорнути»,
+  // щоб не гортати назад до шапки. При кліку згортаємо і ставимо шапку під верх екрана.
+  if (foldBlock.open && !isTrack){
+    const closeP = document.createElement('div');
+    closeP.className = 'fold-close-plain';
+    closeP.textContent = 'Згорнути ↑';
+    closeP.onclick = () => {
+      const scroller = document.getElementById('scroll');
+      det.open = false;                 // згорнути (toggle → setSumText)
+      if (scroller){
+        const cur = sum.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        const prev = scroller.style.scrollBehavior;
+        scroller.style.scrollBehavior = 'auto';
+        scroller.scrollTop += (cur - 40);   // шапку — під верх екрана (40px)
+        scroller.style.scrollBehavior = prev;
+      }
+    };
+    det.appendChild(closeP);
   }
 
   // «вушко» над згорнутим трекованим акордеоном — золотий ярлик, помітніший за
