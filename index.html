@@ -171,7 +171,6 @@
   /* «вушко» — золотий ярлик над згорнутим трекованим акордеоном, щоб помітити раніше */
   .fold-ear {
     max-width: 680px; margin: 22px 0 0 0;
-    display: flex; align-items: center; gap: 8px;
     color: #e7c587; font-size: 13.5px; font-weight: 600; letter-spacing: .02em;
     background: linear-gradient(180deg, #241d10, #16110a);
     border: 1px solid #6a5526; border-bottom: none;
@@ -198,6 +197,8 @@
   }
   .b-fold[open].framed > summary::before { content: "✦ "; color: #c8902f; font-size: 12px; }
   .b-fold[open].framed .b-stage { border-left-color: transparent; }  /* рамка вже окреслює межі */
+  /* прибрати пунктир у перехідну мить між закриттям і перемалюванням (щоб не мигало) */
+  .b-fold.framed > summary { border: none; }
   /* нижній золотий ярлик «згорнути» — закриває рамку знизу, симетрично до верху */
   /* нижня смуга рамки — у самому кінці блоку (закриває рамку знизу) */
   .fold-close {
@@ -624,11 +625,8 @@ function renderFold(parent, foldBlock, bi){
     const ear = document.createElement('div');
     ear.className = 'fold-ear';
     det.classList.add('has-ear');
-    const lbl = document.createElement('span');
-    lbl.textContent = foldName;
-    const go = document.createElement('span');
-    go.className = 'ear-go'; go.textContent = 'торкніться, щоб розгорнути ↓';
-    ear.appendChild(lbl); ear.appendChild(go);
+    // той самий формат, що й відкрита смуга: НАЗВА (жирна) + світла дія — в один рядок
+    ear.innerHTML = foldName + '<span class="fold-act"> · торкніться, щоб розгорнути ↓</span>';
     ear.onclick = () => { det.open = true; };   // відкрити (далі toggle → перебудова з трекінгом)
     parent.appendChild(ear);
   }
