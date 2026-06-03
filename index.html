@@ -667,7 +667,15 @@ function renderFold(parent, foldBlock, bi){
     }
   });
 
-  if (foldBlock.open && tm === 'all'){
+  if (foldBlock.asBlocks){
+    // нетрекований акордеон, але вміст — ЗВИЧАЙНІ блоки (stage/choir/say) з урахуванням
+    // solo (hide/soloText), а не «прохання». Будуємо ЗАВЖДИ — <details> сам показує/ховає.
+    foldBlock.blocks.forEach((cb, ci) => {
+      const b = applySolo(cb);
+      if (b === null) return;
+      appendBlock(det, b, bi + '.' + ci);
+    });
+  } else if (foldBlock.open && tm === 'all'){
     foldBlock.blocks.forEach((cb, ci) => {
       const b = applySolo(cb);
       if (b === null) return;
