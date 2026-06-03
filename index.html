@@ -207,18 +207,20 @@
   }
   .fold-close::before { content: "✦ "; color: #c8902f; font-size: 12px; }
   .fold-close:hover { background: linear-gradient(180deg, #1a140b, #2c2414); }
-  /* липка смуга «згорнути» над футером — зʼявляється ЛИШЕ коли верхня шапка пішла з екрана */
+  /* липка смуга «згорнути» над футером — зʼявляється ЛИШЕ коли верхня шапка пішла з екрана.
+     Та сама форма/ширина, що й нижня смуга рамки (left/width задаються в JS за акордеоном). */
   .sticky-close {
-    position: fixed; left: 0; right: 0; z-index: 44; display: none;
-    background: linear-gradient(180deg, #16110a, #2a2113); border-top: 1px solid #6a5526;
+    position: fixed; z-index: 44; display: none; box-sizing: border-box;
+    background: linear-gradient(180deg, #16110a, #241d10);
+    border: 1px solid #5a4a28; border-radius: 0 0 9px 9px;   /* верх рівний, низ заокруглений — як низ рамки */
     color: #e7c587; font-weight: 600; font-size: 13.5px;
-    padding: 11px 16px; text-align: center; cursor: pointer; user-select: none;
-    box-shadow: 0 -6px 16px rgba(0,0,0,.5);
+    padding: 10px 16px; text-align: center; cursor: pointer; user-select: none;
+    box-shadow: 0 6px 18px rgba(0,0,0,.55);
   }
   .sticky-close.show { display: block; }
   .sticky-close::before { content: "✦ "; color: #c8902f; font-size: 12px; }
-  /* підказка про обране всередині акордеона */
-  .fold-hint { color: #8a8a8a; font-size: 12.5px; line-height: 1.5; margin: 2px 0 12px; }
+  /* підказка про обране всередині акордеона (по центру, як у Довіднику) */
+  .fold-hint { color: #8a8a8a; font-size: 12.5px; line-height: 1.5; margin: 6px 0 14px; text-align: center; }
   .fold-hint .x { color: #e0b94e; }
 
   /* МЕНЮ-ШУХЛЯДА (виїжджає справа) */
@@ -581,14 +583,12 @@ function renderFold(parent, foldBlock, bi){
     if (det.open === foldBlock.open) return;
     foldBlock.open = det.open;
     if (isTrack){
-      // трекований акордеон: перебудувати список слів, зберігши позицію трекера;
-      // шапку акордеона тримаємо на тій самій висоті екрана (anchorId) — щоб при
-      // згортанні після прокрутки сторінку не викидало наперед
-      rerenderPreserving(foldBlock.id);
+      // трекований акордеон: перебудувати список слів, зберігши позицію трекера.
+      // При ВІДКРИТТІ — тримаємо шапку на місці; при ЗАКРИТТІ — не прокручуємо взагалі.
+      rerenderPreserving(foldBlock.id, det.open);
     } else {
-      // звичайні акордеони — як було: без перемальовування, лиш текст шапки
+      // звичайні акордеони — без перемальовування, лиш текст шапки; БЕЗ прокрутки при закритті
       setSumText();
-      if (!det.open) det.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   });
 
@@ -648,7 +648,7 @@ function foldHeaderEl(id){
 // anchorId — id акордеона, чию ВИДИМУ шапку тримати на тій самій висоті екрана. Це
 // важливо при ЗГОРТАННІ після глибокої прокрутки: інакше числова прокрутка опинялась би
 // далеко нижче (бо висота над нею різко зменшилась) і сторінку «викидало» наперед.
-function rerenderPreserving(anchorId){
+function rerenderPreserving(anchorId, isOpening){
   const scroller = document.getElementById('scroll');
   const sTopBefore = scroller ? scroller.getBoundingClientRect().top : 0;
   const savedTop = scroller ? scroller.scrollTop : 0;   // запасний варіант (без якоря)
@@ -674,8 +674,8 @@ function rerenderPreserving(anchorId){
   if (scroller){
     const prev = scroller.style.scrollBehavior;
     scroller.style.scrollBehavior = 'auto';
-    if (anchorViewport != null){
-      // поставити ВИДИМУ шапку акордеона туди, де вона була на екрані
+    if (isOpening && anchorViewport != null){
+      // лише при ВІДКРИТТІ — поставити ВИДИМУ шапку акордеона туди, де вона була на екрані
       const hdr2 = foldHeaderEl(anchorId);
       if (hdr2){
         // ВІДНОСНИЙ зсув (не абсолютний): пересунути шапку з поточної висоти на ту,
@@ -705,19 +705,32 @@ function closeOpenFold(){
 function updateStickyClose(){
   const sticky = document.getElementById('stickyClose');
   if (!sticky) return;
-  const b = BLOCKS.find(x => x.t === 'fold' && x.open && x.trackMode);
   const scroller = document.getElementById('scroll');
-  if (!b || !scroller){ sticky.classList.remove('show'); return; }
-  const top = foldHeaderEl(b.id);
-  const det = document.getElementById(b.id);
-  const bottom = det && det.querySelector('.fold-close');
+  if (!scroller){ sticky.classList.remove('show'); return; }
   const sr = scroller.getBoundingClientRect();
-  const topGone = top ? (top.getBoundingClientRect().bottom <= sr.top + 4) : false;
-  const bottomVisible = bottom ? (bottom.getBoundingClientRect().top <= sr.bottom - 4) : false;
-  if (topGone && !bottomVisible){
-    const name = (b.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
+  // шукаємо відкритий трекований акордеон, який ЗАРАЗ на екрані і чия верхня шапка
+  // вже пішла за верх, а нижня смуга ще не видна (тоді й потрібна липка смуга)
+  let target = null;
+  for (const b of BLOCKS){
+    if (b.t !== 'fold' || !b.open || !b.trackMode) continue;
+    const det = document.getElementById(b.id);
+    if (!det) continue;
+    const dr = det.getBoundingClientRect();
+    if (dr.bottom <= sr.top || dr.top >= sr.bottom) continue;   // акордеон не на екрані
+    const top = foldHeaderEl(b.id);
+    const bottom = det.querySelector('.fold-close');
+    const topGone = top ? (top.getBoundingClientRect().bottom <= sr.top + 4) : false;
+    const bottomVisible = bottom ? (bottom.getBoundingClientRect().top <= sr.bottom - 4) : false;
+    if (topGone && !bottomVisible){ target = { b, dr }; break; }
+  }
+  if (target){
+    const name = (target.b.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
     sticky.textContent = name + ' · торкніться, щоб згорнути ↑';
-    sticky.style.bottom = Math.max(0, window.innerHeight - sr.bottom) + 'px';
+    // та сама ширина/позиція по горизонталі, що й сам акордеон (рамка) — однакова форма
+    sticky.style.left = target.dr.left + 'px';
+    sticky.style.width = target.dr.width + 'px';
+    sticky.style.bottom = (Math.max(0, window.innerHeight - sr.bottom) + 10) + 'px';
+    sticky.onclick = () => { target.b.open = false; rerenderPreserving(target.b.id); };
     sticky.classList.add('show');
   } else {
     sticky.classList.remove('show');
@@ -1028,14 +1041,6 @@ function buildFoldInner(det, foldBlock){
   det.innerHTML = '';
   if (sum) det.appendChild(sum);
 
-  // підказка про обране (як у Довіднику): пояснити, що робить хрест ✠
-  if (foldBlock.open && foldBlock.trackMode === 'fav'){
-    const hint = document.createElement('div');
-    hint.className = 'fold-hint';
-    hint.innerHTML = 'Торкніться <span class="x">✠</span> біля прохання — воно стане обраним: підніметься вгору й трекатиметься.';
-    det.appendChild(hint);
-  }
-
   const groups = groupPetitions(foldBlock.blocks);
   const favG  = groups.filter(g => g.header && isFav(g.header.text.trim()));
   // обрані прохання трекаються лише коли акордеон РОЗГОРНУТИЙ і це повна перебудова
@@ -1079,6 +1084,13 @@ function buildFoldInner(det, foldBlock){
     favG.forEach(g => addPetition(g, trackFav));   // обрані вгорі — трекаються (коли розгорнуто)
     const dv = document.createElement('div'); dv.className = 'ref-divider';
     det.appendChild(dv);
+  } else if (foldBlock.open && foldBlock.trackMode === 'fav'){
+    // обраних ще нема — підказка тим самим текстом, що й у Довіднику
+    const hint = document.createElement('div');
+    hint.className = 'fold-hint';
+    hint.innerHTML = '<span class="x">✠</span> Обране — поки порожньо.<br>' +
+      'Познач <span class="x">✠</span> біля потрібного прохання — і воно зʼявиться тут, угорі.';
+    det.appendChild(hint);
   }
   groups.forEach(g => addPetition(g, false));   // повний список — завжди сірий (обрані вже вгорі)
 }
@@ -1263,11 +1275,17 @@ function buildSectionStrip(){
       userScrollPauseUntil = Date.now() + SCROLL_PAUSE_MS;   // дати спокійно подивитись
       galleryJumpUntil = Date.now() + 800;                   // не смикати стрічку під час стрибка
       setActiveChip(i);                                      // одразу підсвітити й центрувати обраний
-      // стрибок з невеликим відступом зверху, щоб заголовок не впирався у край
+      // ціль: для акордеона — видиме «вушко»/шапка, а не сам <details>
+      let target = h.el;
+      if (target.tagName === 'DETAILS'){
+        const ear = target.previousElementSibling;
+        if (ear && ear.classList && ear.classList.contains('fold-ear')) target = ear;
+        else { const s = target.querySelector('summary'); if (s) target = s; }
+      }
+      // стрибок із чіткою відстанню зверху, щоб не впиралось у край браузера
       const sc = document.getElementById('scroll');
-      const scTop = sc.getBoundingClientRect().top;
-      const elTop = h.el.getBoundingClientRect().top;
-      sc.scrollBy({ top: elTop - scTop - 28, behavior:'smooth' });
+      const gap = 64;
+      sc.scrollBy({ top: target.getBoundingClientRect().top - sc.getBoundingClientRect().top - gap, behavior:'smooth' });
     };
     strip.appendChild(c);
     sectionChips.push(c);
