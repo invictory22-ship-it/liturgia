@@ -179,6 +179,7 @@
   }
   .fold-ear::before { content: "✦"; color: #c8902f; font-size: 12px; }
   .fold-ear .ear-go { margin-left: auto; color: #9a8a5f; font-weight: 400; font-size: 12px; }
+  .fold-act { font-weight: 400; color: #9a8a5f; font-size: 12px; }
   .fold-ear:hover { background: linear-gradient(180deg, #2c2414, #1a140b); }
   /* коли є вушко — золоте вушко і Є шапкою; стара пунктирна шапка ховається (без дубля) */
   .b-fold.has-ear { margin-top: 0; }
@@ -571,8 +572,11 @@ function renderFold(parent, foldBlock, bi){
   const isTrack = tm === 'all' || tm === 'fav';
   const foldName = (foldBlock.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
   const setSumText = () => {
-    // трекований: у золотій смузі завжди НАЗВА + дія (відкрити/закрити); звичайний — як у даних
-    if (isTrack) sum.textContent = det.open ? (foldName + ' · торкніться, щоб згорнути ↑') : foldBlock.text;
+    // трекований: у золотій смузі НАЗВА (жирна) + дія «торкніться…» (світла, не жирна — як у вушку)
+    if (isTrack){
+      if (det.open) sum.innerHTML = foldName + '<span class="fold-act"> · торкніться, щоб згорнути ↑</span>';
+      else sum.textContent = foldBlock.text;
+    }
     else sum.textContent = det.open ? 'Торкніться, щоб згорнути' : foldBlock.text;
   };
   setSumText();
@@ -609,7 +613,7 @@ function renderFold(parent, foldBlock, bi){
     det.classList.add('framed');
     const close = document.createElement('div');
     close.className = 'fold-close';
-    close.textContent = foldName + ' · торкніться, щоб згорнути ↑';
+    close.innerHTML = foldName + '<span class="fold-act"> · торкніться, щоб згорнути ↑</span>';
     close.onclick = () => { det.open = false; };
     det.appendChild(close);
   }
@@ -658,6 +662,13 @@ function rerenderPreserving(anchorId, isOpening){
     const hdr = foldHeaderEl(anchorId);
     if (hdr) anchorViewport = Math.max(0, hdr.getBoundingClientRect().top - sTopBefore);
   }
+  // для ЗАКРИТТЯ — де зараз контент ОДРАЗУ ПІСЛЯ акордеона (щоб тримати його на місці, без «вильоту»)
+  let afterTop = null;
+  if (anchorId && scroller){
+    const det0 = document.getElementById(anchorId);
+    const a0 = det0 && det0.nextElementSibling;
+    if (a0) afterTop = a0.getBoundingClientRect().top - sTopBefore;
+  }
   // ключі поточного слова й кількох попередніх — на випадок, якщо поточне зникло
   const keys = [];
   for (let k = currentIndex; k >= 0 && k > currentIndex - 5; k--){
@@ -686,7 +697,15 @@ function rerenderPreserving(anchorId, isOpening){
         scroller.scrollTop = savedTop;
       }
     } else {
-      scroller.scrollTop = savedTop;   // усе над акордеоном незмінне — числова прокрутка ок
+      // ЗАКРИТТЯ: тримаємо контент ПІСЛЯ акордеона там, де він був — не «вилітаємо»
+      const det2 = document.getElementById(anchorId);
+      const a2 = det2 && det2.nextElementSibling;
+      if (a2 && afterTop != null){
+        const cur = a2.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        scroller.scrollTop += (cur - afterTop);
+      } else {
+        scroller.scrollTop = savedTop;
+      }
     }
     scroller.style.scrollBehavior = prev;
   }
