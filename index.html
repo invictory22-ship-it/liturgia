@@ -575,7 +575,7 @@ function renderFold(parent, foldBlock, bi){
   const setSumText = () => {
     // трекований: у золотій смузі НАЗВА (жирна) + дія «торкніться…» (світла, не жирна — як у вушку)
     if (isTrack){
-      if (det.open) sum.innerHTML = foldName + '<span class="fold-act"> · торкніться, щоб згорнути ↑</span>';
+      if (det.open) sum.innerHTML = foldName + '<span class="fold-act"> · згорнути ↑</span>';
       else sum.textContent = foldBlock.text;
     }
     else sum.textContent = det.open ? 'Торкніться, щоб згорнути' : foldBlock.text;
@@ -614,7 +614,7 @@ function renderFold(parent, foldBlock, bi){
     det.classList.add('framed');
     const close = document.createElement('div');
     close.className = 'fold-close';
-    close.innerHTML = foldName + '<span class="fold-act"> · торкніться, щоб згорнути ↑</span>';
+    close.innerHTML = foldName + '<span class="fold-act"> · згорнути ↑</span>';
     close.onclick = () => { det.open = false; };
     det.appendChild(close);
   }
@@ -626,7 +626,7 @@ function renderFold(parent, foldBlock, bi){
     ear.className = 'fold-ear';
     det.classList.add('has-ear');
     // той самий формат, що й відкрита смуга: НАЗВА (жирна) + світла дія — в один рядок
-    ear.innerHTML = foldName + '<span class="fold-act"> · торкніться, щоб розгорнути ↓</span>';
+    ear.innerHTML = foldName + '<span class="fold-act"> · розгорнути ↓</span>';
     ear.onclick = () => { det.open = true; };   // відкрити (далі toggle → перебудова з трекінгом)
     parent.appendChild(ear);
   }
@@ -736,7 +736,7 @@ function updateStickyClose(){
   }
   if (target){
     const name = (target.b.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
-    sticky.innerHTML = name + '<span class="fold-act"> · торкніться, щоб згорнути ↑</span>';
+    sticky.innerHTML = name + '<span class="fold-act"> · згорнути ↑</span>';
     // та сама ширина/позиція по горизонталі, що й сам акордеон (рамка) — однакова форма
     sticky.style.left = target.dr.left + 'px';
     sticky.style.width = target.dr.width + 'px';
