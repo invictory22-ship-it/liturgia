@@ -225,6 +225,21 @@
   }
   .fold-close-plain::before { content: "\25be "; color: #6a5f3a; }
   .fold-close-plain:hover { background: #141414; }
+  /* РОЗГОРНУТИЙ звичайний акордеон = картка з пунктирною рамкою (видно межі блоку
+     зверху до низу, як у Додаткових проханнях, але в сірому стилі) */
+  .b-fold.reg-fold[open] {
+    border: 1px dashed #3a3320; border-radius: 10px;
+    background: #0d0d0d; padding: 0 16px; margin: 20px 0 22px 0;
+  }
+  .b-fold.reg-fold[open] > summary {            /* шапка = верхня смуга рамки, БЕЗ залипання */
+    position: static; margin: 0 -16px 12px -16px;
+    border: none; border-bottom: 1px dashed #3a3320; border-radius: 9px 9px 0 0;
+    background: #110f0a; color: #b09560; padding: 9px 16px;
+  }
+  .b-fold.reg-fold[open] .fold-close-plain {    /* липучка = нижня смуга рамки */
+    margin: 12px -16px 0 -16px; border: none; border-top: 1px dashed #3a3320;
+    border-radius: 0 0 9px 9px;
+  }
   /* липка смуга «згорнути» над футером — зʼявляється ЛИШЕ коли верхня шапка пішла з екрана.
      Та сама форма/ширина, що й нижня смуга рамки (left/width задаються в JS за акордеоном). */
   .sticky-close {
@@ -603,6 +618,8 @@ function renderFold(parent, foldBlock, bi){
   det.appendChild(sum);
   const tm = foldBlock.trackMode;                  // 'all' (вся ектенія) | 'fav' (лише обрані) | undefined
   const isTrack = tm === 'all' || tm === 'fav';
+  if (!isTrack) det.classList.add('reg-fold');     // пунктирна рамка через CSS [open]
+  const foldKey = foldBlock.id || ('reg-' + bi);   // ключ для foldOpenY (закрити «на місці»)
   const foldName = (foldBlock.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
   const setSumText = () => {
     // трекований: у золотій смузі НАЗВА (жирна) + дія «торкніться…» (світла, не жирна — як у вушку)
@@ -624,8 +641,24 @@ function renderFold(parent, foldBlock, bi){
       // При ВІДКРИТТІ — тримаємо шапку на місці; при ЗАКРИТТІ — не прокручуємо взагалі.
       rerenderPreserving(foldBlock.id, det.open);
     } else {
-      // звичайні акордеони — без перемальовування, лиш текст шапки; БЕЗ прокрутки при закритті
+      // звичайні акордеони — без перемальовування, лиш текст шапки.
       setSumText();
+      // «закрити на тому ж місці»: при ВІДКРИТТІ запам'ятовуємо, де шапка на екрані;
+      // при ЗАКРИТТІ повертаємо її рівно туди ж (як у Додаткових проханнях).
+      const scroller = document.getElementById('scroll');
+      if (scroller){
+        const sTop = scroller.getBoundingClientRect().top;
+        if (det.open){
+          foldOpenY[foldKey] = sum.getBoundingClientRect().top - sTop;
+        } else {
+          const targetY = (foldOpenY[foldKey] != null) ? foldOpenY[foldKey] : 40;
+          const cur = sum.getBoundingClientRect().top - sTop;
+          const prev = scroller.style.scrollBehavior;
+          scroller.style.scrollBehavior = 'auto';
+          scroller.scrollTop += (cur - targetY);
+          scroller.style.scrollBehavior = prev;
+        }
+      }
     }
   });
 
@@ -659,17 +692,7 @@ function renderFold(parent, foldBlock, bi){
     const closeP = document.createElement('div');
     closeP.className = 'fold-close-plain';
     closeP.textContent = 'Згорнути ↑';
-    closeP.onclick = () => {
-      const scroller = document.getElementById('scroll');
-      det.open = false;                 // згорнути (toggle → setSumText)
-      if (scroller){
-        const cur = sum.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-        const prev = scroller.style.scrollBehavior;
-        scroller.style.scrollBehavior = 'auto';
-        scroller.scrollTop += (cur - 40);   // шапку — під верх екрана (40px)
-        scroller.style.scrollBehavior = prev;
-      }
-    };
+    closeP.onclick = () => { det.open = false; };   // toggle сам поверне «на місце»
     det.appendChild(closeP);
   }
 
