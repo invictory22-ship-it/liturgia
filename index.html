@@ -364,16 +364,29 @@
   /* ДОВІДНИК «НА ВЕСЬ РІК» — картка свята (по святах) */
   .ref-feast { margin: 10px 0; border: 1px solid #262015; border-radius: 10px;
     overflow: hidden; background: #131210; }
-  .ref-feast > summary { list-style: none; cursor: pointer; padding: 13px 16px;
-    color: #c9a96a; font-size: 17px; background: #17150f; }
+  .ref-feast > summary { list-style: none; cursor: pointer; padding: 12px 16px;
+    background: #17150f; }
   .ref-feast > summary::-webkit-details-marker { display: none; }
-  .ref-feast > summary::before { content: "\25b8 "; color: #6a5f3a; }
-  .ref-feast[open] > summary::before { content: "\25be "; }
   .ref-feast[open] > summary { border-bottom: 1px solid #262015; }
-  .ref-feast .feast-date { color: #8a7a52; font-size: 13px; }
+  /* рядок 1 — назва (з трикутником-маркером), рядок 2 — дата з кольоровою точкою */
+  .ref-feast .feast-name { color: #c9a96a; font-size: 17px; }
+  .ref-feast .feast-name::before { content: "\25b8 "; color: #6a5f3a; }
+  .ref-feast[open] .feast-name::before { content: "\25be "; }
+  .ref-feast .feast-meta { display: flex; align-items: center; gap: 8px;
+    margin: 4px 0 0 18px; color: #8a7a52; font-size: 13px; }
+  /* кольорова мітка типу свята (Господнє / Богородичне / Велике / Святого) */
+  .feast-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    margin-right: 10px; vertical-align: middle; flex-shrink: 0; }
+  .type-lord { background: #cf6a4a; }       /* Господнє — теплий червоний */
+  .type-theotokos { background: #5b9bd5; }   /* Богородичне — блакитний */
+  .type-great { background: #d2a24c; }       /* Велике свято — золотий */
+  .type-saint { background: #6fae6f; }       /* Святого — зелений */
+  .feast-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center;
+    margin: 0 0 16px; color: #8a8a8a; font-size: 12.5px; }
+  .feast-legend span { display: inline-flex; align-items: center; }
   .ref-row { padding: 11px 16px; border-top: 1px solid #1c1a14; }
   .ref-row:first-of-type { border-top: none; }
-  .ref-row-lbl { color: #8a8a8a; font-size: 12px; text-transform: uppercase;
+  .ref-row-lbl { color: #a8915c; font-size: 12px; text-transform: uppercase;
     letter-spacing: .3px; margin-bottom: 3px; }
   .ref-row-txt { color: #e8e2d0; font-size: 18px; line-height: 1.5; }
   /* стих — у ТОМУ Ж блоці, що й прокимен (без роздільної риски), лиш дрібніший курсив */
@@ -1361,15 +1374,44 @@ function renderYearBody(){
   body.appendChild(intro);
 
   const FF = (typeof FEASTS !== 'undefined') ? FEASTS : [];
+
+  // легенда кольорових міток — лише ті типи, що реально є у списку
+  const TYPE_LBL = { lord: 'Господнє', theotokos: 'Богородичне', great: 'Велике свято', saint: 'Святого' };
+  const present = ['lord','theotokos','great','saint'].filter(tp => FF.some(f => f.type === tp));
+  if (present.length){
+    const lg = document.createElement('div');
+    lg.className = 'feast-legend';
+    present.forEach(tp => {
+      const s = document.createElement('span');
+      const dot = document.createElement('span');
+      dot.className = 'feast-dot type-' + tp;
+      s.appendChild(dot); s.appendChild(document.createTextNode(TYPE_LBL[tp]));
+      lg.appendChild(s);
+    });
+    body.appendChild(lg);
+  }
+
   FF.forEach(f => {
     const det = document.createElement('details');
     det.className = 'ref-feast';
     const sum = document.createElement('summary');
-    sum.textContent = f.name;
-    if (f.dateLabel){
-      const d = document.createElement('span');
-      d.className = 'feast-date'; d.textContent = ' · ' + f.dateLabel;
-      sum.appendChild(d);
+    // рядок 1 — назва
+    const nm = document.createElement('div');
+    nm.className = 'feast-name'; nm.textContent = f.name;
+    sum.appendChild(nm);
+    // рядок 2 — кольорова точка типу + дата
+    if (f.type || f.dateLabel){
+      const meta = document.createElement('div');
+      meta.className = 'feast-meta';
+      if (f.type){
+        const dot = document.createElement('span');
+        dot.className = 'feast-dot type-' + f.type;
+        meta.appendChild(dot);
+      }
+      if (f.dateLabel){
+        meta.appendChild(document.createTextNode(f.dateLabel));
+      }
+      sum.appendChild(meta);
     }
     det.appendChild(sum);
 
@@ -1391,7 +1433,7 @@ function renderYearBody(){
       row.className = 'ref-row';
       const l = document.createElement('div');
       l.className = 'ref-row-lbl';
-      l.textContent = label + (prok.glas ? (', глас ' + prok.glas) : '');
+      l.textContent = (prok.label || label) + (prok.glas ? (', глас ' + prok.glas) : '');
       const t = document.createElement('div');
       t.className = 'ref-row-txt'; t.textContent = prok.text;
       row.appendChild(l); row.appendChild(t);
