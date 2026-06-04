@@ -361,6 +361,22 @@
   .ref-say { margin: 12px 0; }
   .ref-say .ref-role { color: #777; font-size: 12px; margin-bottom: 3px; }
   .ref-text { font-size: 20px; line-height: 1.5; color: #e8e2d0; }
+  /* ДОВІДНИК «НА ВЕСЬ РІК» — картка свята (по святах) */
+  .ref-feast { margin: 10px 0; border: 1px solid #262015; border-radius: 10px;
+    overflow: hidden; background: #131210; }
+  .ref-feast > summary { list-style: none; cursor: pointer; padding: 13px 16px;
+    color: #c9a96a; font-size: 17px; background: #17150f; }
+  .ref-feast > summary::-webkit-details-marker { display: none; }
+  .ref-feast > summary::before { content: "\25b8 "; color: #6a5f3a; }
+  .ref-feast[open] > summary::before { content: "\25be "; }
+  .ref-feast[open] > summary { border-bottom: 1px solid #262015; }
+  .ref-feast .feast-date { color: #8a7a52; font-size: 13px; }
+  .ref-row { padding: 11px 16px; border-top: 1px solid #1c1a14; }
+  .ref-row:first-of-type { border-top: none; }
+  .ref-row-lbl { color: #8a8a8a; font-size: 12px; text-transform: uppercase;
+    letter-spacing: .3px; margin-bottom: 3px; }
+  .ref-row-txt { color: #e8e2d0; font-size: 18px; line-height: 1.5; }
+  .ref-row.is-stih .ref-row-txt { color: #9a9a9a; font-size: 16px; font-style: italic; }
 </style>
 </head>
 <body>
@@ -379,7 +395,7 @@
 
     <div class="drawer-group">Довідник</div>
     <a onclick="openReference()">Додаткові прохання на ектеніях</a>
-    <a class="soon">Прокимни, величання, відпусти</a>
+    <a onclick="openYearRef()">Прокимни, величання, відпусти</a>
     <a class="soon">Наука про відпусти</a>
     <a class="soon">Молитви перед / після Причастя</a>
 
@@ -394,7 +410,7 @@
 <div class="ref-page" id="refPage">
   <div class="ref-scroll">
     <div class="ref-body">
-      <div class="ref-title">Додаткові прохання на ектеніях</div>
+      <div class="ref-title" id="refTitle">Додаткові прохання на ектеніях</div>
       <div id="refBody"></div>
     </div>
   </div>
@@ -1315,14 +1331,73 @@ function renderReferenceBody(){
   }
 }
 
-function openReference(){
+// Спільне відкриття сторінки-довідника: ставимо заголовок і будуємо тіло.
+function openRefPage(title, buildBody){
   document.getElementById('drawer').classList.remove('open');
   document.getElementById('drawerOverlay').classList.remove('open');
-  renderReferenceBody();
+  const t = document.getElementById('refTitle');
+  if (t) t.textContent = title;
+  buildBody();
   const p = document.getElementById('refPage');
   p.classList.add('open'); p.scrollTop = 0;
 }
+function openReference(){
+  openRefPage('Додаткові прохання на ектеніях', renderReferenceBody);
+}
 function closeReference(){ document.getElementById('refPage').classList.remove('open'); }
+
+// Довідник «На весь рік» — ПО СВЯТАХ: відкрив свято, бачиш усе про нього
+// (величання, прокимни, вхідне, відпуст). Дані — зі словника FEASTS.
+function renderYearBody(){
+  const body = document.getElementById('refBody');
+  body.innerHTML = '';
+  const intro = document.createElement('div');
+  intro.className = 'ref-hint';
+  intro.innerHTML = 'Оберіть свято — і побачите все про нього разом: величання, прокимни, вхідне, відпуст.';
+  body.appendChild(intro);
+
+  const FF = (typeof FEASTS !== 'undefined') ? FEASTS : [];
+  FF.forEach(f => {
+    const det = document.createElement('details');
+    det.className = 'ref-feast';
+    const sum = document.createElement('summary');
+    sum.textContent = f.name;
+    if (f.dateLabel){
+      const d = document.createElement('span');
+      d.className = 'feast-date'; d.textContent = ' · ' + f.dateLabel;
+      sum.appendChild(d);
+    }
+    det.appendChild(sum);
+
+    const addRow = (label, text, isStih) => {
+      if (!text) return;
+      const row = document.createElement('div');
+      row.className = 'ref-row' + (isStih ? ' is-stih' : '');
+      const l = document.createElement('div');
+      l.className = 'ref-row-lbl'; l.textContent = label;
+      const t = document.createElement('div');
+      t.className = 'ref-row-txt'; t.textContent = text;
+      row.appendChild(l); row.appendChild(t);
+      det.appendChild(row);
+    };
+
+    addRow('Величання', f.velychannia);
+    if (f.prokMatins){
+      addRow('Прокимен на ранній' + (f.prokMatins.glas ? (', глас ' + f.prokMatins.glas) : ''), f.prokMatins.text);
+      addRow('Стих', f.prokMatins.stih, true);
+    }
+    if (f.prokVespers){
+      addRow('Прокимен великий на вечірній' + (f.prokVespers.glas ? (', глас ' + f.prokVespers.glas) : ''), f.prokVespers.text);
+      addRow('Стих', f.prokVespers.stih, true);
+    }
+    addRow('Вхідне', f.vhidne);
+    addRow('Відпуст', f.vidpust);
+    body.appendChild(det);
+  });
+}
+function openYearRef(){
+  openRefPage('Прокимни, величання, відпусти', renderYearBody);
+}
 
 document.getElementById('soloMode').addEventListener('change',(e)=>{
   soloMode=e.target.checked; currentIndex=0; finalWordCount=0; render();

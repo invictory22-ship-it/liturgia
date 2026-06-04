@@ -7,18 +7,29 @@ import re, json, sys
 
 errors = []
 
-# 1) liturgy-data.js
+# 1) liturgy-data.js — два масиви: BLOCKS (текст служби) і FEASTS (словник свят).
+# Кожен масив закінчується рядком, що починається з "];" — нежадібно беремо до нього.
 try:
     txt = open('liturgy-data.js', encoding='utf-8').read()
-    m = re.search(r'const BLOCKS = (\[.*\]);', txt, re.S)
+
+    # --- BLOCKS (обов'язковий) ---
+    m = re.search(r'const BLOCKS = (\[[\s\S]*?\n\]);', txt)
     if not m:
         errors.append('liturgy-data.js: не знайдено const BLOCKS = [...]')
     else:
         blocks = json.loads(m.group(1))
-        # дрібна перевірка структури
         for i, b in enumerate(blocks):
             if 't' not in b or 'text' not in b:
                 errors.append('liturgy-data.js: блок #%d без t/text' % i)
+                break
+
+    # --- FEASTS (необов'язковий словник свят) ---
+    mf = re.search(r'const FEASTS = (\[[\s\S]*?\n\]);', txt)
+    if mf:
+        feasts = json.loads(mf.group(1))
+        for i, f in enumerate(feasts):
+            if 'name' not in f:
+                errors.append('liturgy-data.js: свято #%d без name' % i)
                 break
 except json.JSONDecodeError as e:
     errors.append('liturgy-data.js: ПОМИЛКА JSON (мабуть зайва/відсутня кома) - рядок %d' % e.lineno)
