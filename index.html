@@ -410,8 +410,12 @@
     <div class="drawer-head">Зміст</div>
 
     <div class="drawer-group">Літургія Іоана Золотоустого</div>
+    <a onclick="toggleMenu(); loadService('liturgy')">↩ Відкрити Літургію (на початок)</a>
     <a onclick="jumpTo('dod-velyka')">Велика ектенія — додаткові прохання</a>
     <a onclick="jumpTo('dod-potrijna')">Потрійна ектенія — додаткові прохання</a>
+
+    <div class="drawer-group">Пасхальні служби</div>
+    <a onclick="toggleMenu(); loadService('pasky')">Благословення і освячення пасок</a>
 
     <div class="drawer-group">Довідник</div>
     <a onclick="openReference()">Додаткові прохання на ектеніях</a>
@@ -537,6 +541,20 @@ function applySolo(block){
   return b;
 }
 
+// Активна служба (головна Літургія за замовч.); меню перемикає на пасхальні тощо.
+let activeBlocks = (typeof BLOCKS !== 'undefined') ? BLOCKS : [];
+let currentServiceId = 'liturgy';
+function loadService(id){
+  const s = (typeof SERVICES !== 'undefined') ? SERVICES.find(x => x.id === id) : null;
+  if (!s) return;
+  currentServiceId = id;
+  activeBlocks = s.blocks;
+  currentIndex = 0; finalWordCount = 0;
+  closeReference();
+  render();
+  const sc = document.getElementById('scroll'); if (sc) sc.scrollTop = 0;
+}
+
 function render(skipHL){
   const scroll = document.getElementById('scroll');
   scroll.innerHTML = '';
@@ -545,7 +563,7 @@ function render(skipHL){
   sayBlk = 0;
   renderingFull = true;          // дозволити трекінг обраних прохань усередині акордеонів
 
-  BLOCKS.forEach((rawBlock, bi) => {
+  activeBlocks.forEach((rawBlock, bi) => {
     if (rawBlock.t === 'fold'){ renderFold(scroll, rawBlock, bi); return; }
     const block = applySolo(rawBlock);
     if (block === null) return;
@@ -851,7 +869,7 @@ function rerenderPreserving(anchorId, isOpening){
 
 // Згорнути відкритий трекований акордеон (липка смуга над футером).
 function closeOpenFold(){
-  const b = BLOCKS.find(x => x.t === 'fold' && x.open && x.trackMode);
+  const b = activeBlocks.find(x => x.t === 'fold' && x.open && x.trackMode);
   if (b){ b.open = false; rerenderPreserving(b.id); }
 }
 
@@ -866,7 +884,7 @@ function updateStickyClose(){
   // шукаємо відкритий трекований акордеон, який ЗАРАЗ на екрані і чия верхня шапка
   // вже пішла за верх, а нижня смуга ще не видна (тоді й потрібна липка смуга)
   let target = null;
-  for (const b of BLOCKS){
+  for (const b of activeBlocks){
     if (b.t !== 'fold' || !b.open || !b.trackMode) continue;
     const det = document.getElementById(b.id);
     if (!det) continue;
@@ -1115,11 +1133,12 @@ function toggleMenu(){
 }
 // "Стрибок" з меню: закрити шухляду, розгорнути акордеон, прокрутити до нього, блимнути.
 function jumpTo(id){
+  if (currentServiceId !== 'liturgy') loadService('liturgy');   // переходи в службу — на Літургії
   toggleMenu();
   closeReference();              // якщо була відкрита довідка — закрити, ми йдемо в службу
   // трекований акордеон розгортаємо СИНХРОННО (з перебудовою сторінки), інакше
   // після перемальовування старий елемент відʼєднається і скрол/спалах не спрацюють
-  const b = BLOCKS.find(x => x.t === 'fold' && x.id === id);
+  const b = activeBlocks.find(x => x.t === 'fold' && x.id === id);
   if (b && b.trackMode && !b.open){ b.open = true; rerenderPreserving(); }
   const el = document.getElementById(id);   // свіжий елемент (після можливої перебудови)
   if(!el) return;

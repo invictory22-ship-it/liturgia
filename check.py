@@ -31,6 +31,16 @@ try:
             if 'name' not in f:
                 errors.append('liturgy-data.js: свято #%d без name' % i)
                 break
+
+    # --- PASKY та інші служби (масиви блоків, як BLOCKS) ---
+    for name in ('PASKY',):
+        ms = re.search(r'const %s = (\[[\s\S]*?\n\]);' % name, txt)
+        if ms:
+            blk = json.loads(ms.group(1))
+            for i, b in enumerate(blk):
+                if 't' not in b or 'text' not in b:
+                    errors.append('liturgy-data.js: %s блок #%d без t/text' % (name, i))
+                    break
 except json.JSONDecodeError as e:
     errors.append('liturgy-data.js: ПОМИЛКА JSON (мабуть зайва/відсутня кома) - рядок %d' % e.lineno)
 except FileNotFoundError:
