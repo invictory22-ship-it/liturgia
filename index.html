@@ -376,7 +376,11 @@
   .ref-row-lbl { color: #8a8a8a; font-size: 12px; text-transform: uppercase;
     letter-spacing: .3px; margin-bottom: 3px; }
   .ref-row-txt { color: #e8e2d0; font-size: 18px; line-height: 1.5; }
-  .ref-row.is-stih .ref-row-txt { color: #9a9a9a; font-size: 16px; font-style: italic; }
+  /* стих — у ТОМУ Ж блоці, що й прокимен (без роздільної риски), лиш дрібніший курсив */
+  .ref-stih { color: #9a9a9a; font-size: 16px; font-style: italic; line-height: 1.5; margin-top: 7px; }
+  /* нижня липучка «згорнути» картки свята — у стилі звичайних акордеонів (.fold-close-plain) */
+  .ref-feast .fold-close-plain { margin: 0; border: none; border-top: 1px solid #262015;
+    border-radius: 0; color: #8a7a52; }
 </style>
 </head>
 <body>
@@ -1369,10 +1373,10 @@ function renderYearBody(){
     }
     det.appendChild(sum);
 
-    const addRow = (label, text, isStih) => {
+    const addRow = (label, text) => {
       if (!text) return;
       const row = document.createElement('div');
-      row.className = 'ref-row' + (isStih ? ' is-stih' : '');
+      row.className = 'ref-row';
       const l = document.createElement('div');
       l.className = 'ref-row-lbl'; l.textContent = label;
       const t = document.createElement('div');
@@ -1380,18 +1384,38 @@ function renderYearBody(){
       row.appendChild(l); row.appendChild(t);
       det.appendChild(row);
     };
+    // Прокимен + стих — ОДНИМ блоком (стих усередині, без роздільної риски)
+    const addProk = (label, prok) => {
+      if (!prok || !prok.text) return;
+      const row = document.createElement('div');
+      row.className = 'ref-row';
+      const l = document.createElement('div');
+      l.className = 'ref-row-lbl';
+      l.textContent = label + (prok.glas ? (', глас ' + prok.glas) : '');
+      const t = document.createElement('div');
+      t.className = 'ref-row-txt'; t.textContent = prok.text;
+      row.appendChild(l); row.appendChild(t);
+      if (prok.stih){
+        const s = document.createElement('div');
+        s.className = 'ref-stih'; s.textContent = 'Стих: ' + prok.stih;
+        row.appendChild(s);
+      }
+      det.appendChild(row);
+    };
 
     addRow('Величання', f.velychannia);
-    if (f.prokMatins){
-      addRow('Прокимен на ранній' + (f.prokMatins.glas ? (', глас ' + f.prokMatins.glas) : ''), f.prokMatins.text);
-      addRow('Стих', f.prokMatins.stih, true);
-    }
-    if (f.prokVespers){
-      addRow('Прокимен великий на вечірній' + (f.prokVespers.glas ? (', глас ' + f.prokVespers.glas) : ''), f.prokVespers.text);
-      addRow('Стих', f.prokVespers.stih, true);
-    }
+    addProk('Прокимен на ранній', f.prokMatins);
+    addProk('Прокимен великий на вечірній', f.prokVespers);
     addRow('Вхідне', f.vhidne);
     addRow('Відпуст', f.vidpust);
+
+    // нижня липучка «згорнути» — як у звичайних акордеонах служби
+    const close = document.createElement('div');
+    close.className = 'fold-close-plain';
+    close.innerHTML = f.name + '<span class="fold-act"> — згорнути ↑</span>';
+    close.onclick = () => { det.open = false; };
+    det.appendChild(close);
+
     body.appendChild(det);
   });
 }
