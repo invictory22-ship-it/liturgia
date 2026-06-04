@@ -409,13 +409,13 @@
   <div class="drawer-scroll">
     <div class="drawer-head">Зміст</div>
 
-    <div class="drawer-group">Літургія Іоана Золотоустого</div>
-    <a onclick="toggleMenu(); loadService('liturgy')">↩ Відкрити Літургію (на початок)</a>
+    <div class="drawer-group">Служби</div>
+    <a onclick="toggleMenu(); loadService('liturgy')">Літургія Іоана Золотоустого</a>
+    <a onclick="toggleMenu(); loadService('pasky')">Благословення і освячення пасок</a>
+
+    <div class="drawer-group">Літургія — перейти до</div>
     <a onclick="jumpTo('dod-velyka')">Велика ектенія — додаткові прохання</a>
     <a onclick="jumpTo('dod-potrijna')">Потрійна ектенія — додаткові прохання</a>
-
-    <div class="drawer-group">Пасхальні служби</div>
-    <a onclick="toggleMenu(); loadService('pasky')">Благословення і освячення пасок</a>
 
     <div class="drawer-group">Довідник</div>
     <a onclick="openReference()">Додаткові прохання на ектеніях</a>
@@ -474,7 +474,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js"></script>
+<script src="liturgy-data.js?v=2"></script>
 <script>
 
 let recognition = null, isListening = false;
