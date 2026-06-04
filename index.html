@@ -37,9 +37,9 @@
   button.primary.listening { background: #1a1a1a; border-color: #c4661a; color: #c4661a; }
   .settings {
     position: absolute; left: 0; right: 0; bottom: 100%;
-    background: #080808; border-top: 1px solid #1f1f1f;
+    background: #1b1b1b; border-top: 1px solid #383838;
     padding: 14px 18px; display: none; z-index: 30;
-    box-shadow: 0 -8px 22px rgba(0,0,0,.55);
+    box-shadow: 0 -8px 22px rgba(0,0,0,.6);
   }
   .settings.open { display: block; }
   .settings-row {
@@ -409,23 +409,17 @@
 <div class="footer">
   <div class="settings" id="settings">
     <div class="settings-row">
-      <label>Вікно пошуку:</label>
-      <input type="range" id="window" min="2" max="15" value="3">
-      <span id="windowOut" style="color:#ddd;min-width:18px;">3</span>
-      <span style="color:#555;">слів вперед (менше = менше стрибків)</span>
-    </div>
-    <div class="settings-row" style="margin-top:12px;">
       <input type="checkbox" id="soloMode" checked>
-      <label for="soloMode">Служу сам (без диякона): ховати дії диякона, промовляю і дияконські частини</label>
+      <label for="soloMode">Служу сам (без диякона)</label>
     </div>
-    <div class="settings-row" style="margin-top:8px;">
+    <div class="settings-row" style="margin-top:10px;">
       <label>Розмір тексту:</label>
       <input type="range" id="fontSize" min="20" max="46" value="30">
       <span id="fontOut" style="color:#ddd;">30</span>
     </div>
-    <div class="settings-row" style="margin-top:12px;">
+    <div class="settings-row" style="margin-top:10px;">
       <input type="checkbox" id="keepAwake">
-      <label for="keepAwake">Не гасити екран під час служби</label>
+      <label for="keepAwake">Не гасити екран</label>
       <span id="keepAwakeNote" style="color:#555;"></span>
     </div>
   </div>
@@ -448,7 +442,6 @@ let currentIndex = 0;          // index into trackedWords
 let trackedWords = [];         // [{text, normalized, el, blk}] blk = № мовленнєвого блоку
 let sayBlk = 0;                // лічильник мовленнєвих блоків (для меж підхвату)
 let sectionHeaders = [];       // [{el, text}] — заголовки розділів для індикатора "ти тут"
-let lookAheadWindow = 3;       // (історичний повзунок; стрибок тепер вимагає 2 слова, див. advance)
 let finalWordCount = 0;        // скільки ФІНАЛЬНИХ слів уже оброблено (interim ігноруємо)
 let soloMode = true;           // "Служу сам": ховає дії диякона, трекає дияконське,
                                // міняє ролі. Увімкнено за замовч. (постійний режим отця)
@@ -1331,9 +1324,6 @@ function openReference(){
 }
 function closeReference(){ document.getElementById('refPage').classList.remove('open'); }
 
-document.getElementById('window').addEventListener('input',(e)=>{
-  lookAheadWindow=parseInt(e.target.value); document.getElementById('windowOut').textContent=lookAheadWindow;
-});
 document.getElementById('soloMode').addEventListener('change',(e)=>{
   soloMode=e.target.checked; currentIndex=0; finalWordCount=0; render();
 });
