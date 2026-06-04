@@ -33,7 +33,7 @@ try:
                 break
 
     # --- PASKY та інші служби (масиви блоків, як BLOCKS) ---
-    for name in ('PASKY',):
+    for name in ('PASKY', 'PASKHA_LITURGY'):
         ms = re.search(r'const %s = (\[[\s\S]*?\n\]);' % name, txt)
         if ms:
             blk = json.loads(ms.group(1))
