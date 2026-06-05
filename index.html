@@ -107,7 +107,7 @@
     display: inline-block; color: #6a6a6a; font-size: 13px; font-weight: 500;
     text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
   }
-  .b-say .saytext { font-size: var(--say-fs, 30px); line-height: 1.5; }
+  .b-say .saytext { font-size: var(--say-fs, 30px); line-height: 1.5; white-space: pre-line; }
   /* PRAYER (велика молитва, але НЕ трекається — для особистого читання) */
   .b-prayer { margin: 22px 0; }
   .b-prayer .lbl {
@@ -600,6 +600,16 @@ function archFull(){      // форми B/C: імʼя + (за наявності
   return ', і владику нашого ' + n + ', ' + (ARCH_SAN[archSan] || ARCH_SAN.bishop) + (t ? ' ' + t : '');
 }
 
+// Виголос поминання у диптиху: коли поминається єпархіальний архієрей (вписане імʼя)
+// — поминаються двоє (Епіфаній + місцевий владика) → МНОЖИНА «їх… вони… були…».
+// Коли імʼя порожнє — лише Епіфаній → ОДНИНА «його… він… був…».
+function darovane(){
+  const hasArch = (archName||'').trim() !== '';
+  return hasArch
+    ? 'і даруй їх святим Твоїм Церквам, щоб були вони у мирі, бережені, почесні, здорові, довговічні і правдиво навчали слову Твоєї істини.'
+    : 'і даруй його святій Твоїй Церкві, щоб був він у мирі, бережений, почесний, здоровий, довговічний і правдиво навчав слову Твоєї істини.';
+}
+
 function applyVars(text){
   if (!text || text.indexOf('{{') === -1) return text;
   const v = COMMUNITY_VARS[community] || COMMUNITY_VARS.city;
@@ -607,6 +617,7 @@ function applyVars(text){
     const k = key.trim();
     if (k === 'архієрей') return archShort();
     if (k === 'архієрей-повний') return archFull();
+    if (k === 'дароване') return darovane();
     const val = v[k];
     return (val !== undefined) ? val : m;
   });
