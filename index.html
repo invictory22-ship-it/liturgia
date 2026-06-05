@@ -818,6 +818,12 @@ let foldOpenY = {};
 // Малює акордеон. Якщо він РОЗГОРНУТИЙ і має trackMode:"all" — його вміст
 // малюється звичайними блоками (молитви великі й ТРЕКАЮТЬСЯ); інакше — як було
 // (buildFoldInner: дрібний сірий вміст, обрані прохання вгорі).
+// Назва акордеона для шапки/вушка/липучки — БЕРЕТЬСЯ З ДАНИХ (не зашита в коді).
+// Пріоритет: title → name → section → text. Так новий акордеон лише оголошує свою назву.
+function foldTitle(fb){
+  return fb.title || fb.name || fb.section || fb.text || '';
+}
+
 function renderFold(parent, foldBlock, bi){
   const det = document.createElement('details');
   det.className = 'b-fold';
@@ -829,7 +835,7 @@ function renderFold(parent, foldBlock, bi){
   const isTrack = tm === 'all' || tm === 'fav';
   if (!isTrack) det.classList.add('reg-fold');     // пунктирна рамка через CSS [open]
   const foldKey = foldBlock.id || ('reg-' + bi);   // ключ для foldOpenY (закрити «на місці»)
-  const foldName = (foldBlock.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
+  const foldName = foldTitle(foldBlock);
   // назва звичайного акордеона для єдиних написів «<назва> — розгорнути/згорнути»
   const regName = foldBlock.name || foldBlock.text;
   const setSumText = () => {
@@ -1037,7 +1043,7 @@ function updateStickyClose(){
     if (topGone && !bottomVisible){ target = { b, dr }; break; }
   }
   if (target){
-    const name = (target.b.id === 'ektenia-ogoloshenykh') ? 'Ектенія за оголошених' : 'Додаткові прохання';
+    const name = foldTitle(target.b);
     sticky.innerHTML = name + '<span class="fold-act"> · згорнути ↑</span>';
     // та сама ширина/позиція по горизонталі, що й сам акордеон (рамка) — однакова форма
     sticky.style.left = target.dr.left + 'px';

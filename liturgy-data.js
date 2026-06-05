@@ -1369,6 +1369,7 @@ const BLOCKS = [
   "t": "fold",
   "role": "",
   "id": "ektenia-ogoloshenykh",
+  "title": "Ектенія за оголошених",
   "text": "Ектенія за оголошених... Натисни, щоб розгорнути.",
   "open": false,
   "trackMode": "all",
