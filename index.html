@@ -58,6 +58,7 @@
   .settings-row input[type=text]::placeholder { color: #666; }
   /* згрупований блок налаштувань (архієрей) — відділений лініями згори й знизу */
   .settings-group { border-top: 1px solid #383838; border-bottom: 1px solid #383838; margin-top: 10px; padding: 9px 0; }
+  .settings-row.settings-head label { color: #cbb27e; font-weight: 600; letter-spacing: .01em; }
 
   .scroll {
     flex: 1; overflow-y: auto; scroll-behavior: smooth;
@@ -479,8 +480,10 @@
       <label class="radio-lbl"><input type="radio" name="community" value="monastery"> Монастир</label>
     </div>
     <div class="settings-group">
-      <div class="settings-row" id="archRow">
-        <label>Єпархіальний архієрей:</label>
+      <div class="settings-row settings-head" id="archRow">
+        <label>Єпархіальний архієрей</label>
+      </div>
+      <div class="settings-row" style="margin-top:6px;">
         <label class="radio-lbl"><input type="radio" name="archSan" value="bishop"> Єпископ</label>
         <label class="radio-lbl"><input type="radio" name="archSan" value="archbishop"> Архієпископ</label>
         <label class="radio-lbl"><input type="radio" name="archSan" value="metropolitan"> Митрополит</label>
@@ -491,7 +494,7 @@
       </div>
       <div class="settings-row" style="margin-top:6px;">
         <label for="archTitle">Титул:</label>
-        <input type="text" id="archTitle" placeholder="напр. Білоцерківського" autocomplete="off" style="width:200px;">
+        <input type="text" id="archTitle" placeholder="напр. Білоцерківського" autocomplete="off" style="width:240px;">
       </div>
       <div class="settings-row" id="archHint" style="margin-top:4px; color:#666; font-size:12px; display:block; line-height:1.45;">
         Предстоятеля (Митрополита Епіфанія) поминаємо завжди.<br>
