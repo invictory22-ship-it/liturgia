@@ -815,25 +815,54 @@ function appendBlock(parent, block, path){
 // щоб при ЗАКРИТТІ повернути акордеон точно на те саме місце. Ключ — id акордеона.
 let foldOpenY = {};
 
-// Малює акордеон. Якщо він РОЗГОРНУТИЙ і має trackMode:"all" — його вміст
-// малюється звичайними блоками (молитви великі й ТРЕКАЮТЬСЯ); інакше — як було
-// (buildFoldInner: дрібний сірий вміст, обрані прохання вгорі).
+// ============================================================================
+//  ФОРМАТ АКОРДЕОНА (блок {t:"fold"}) — рецепт для нових служб/довідників.
+//  Два канонічні види (вигляд — зі спільних CSS-констант :root):
+//
+//  1) ЗВИЧАЙНИЙ (сірий, пунктирний) — нетрекований вміст-ремарки/хор.
+//     { t:"fold", name:"Назва", text:"Назва — розгорнути.", open:false,
+//       asBlocks:true, blocks:[ {t:"stage"|"choir"|"say", ...} ] }
+//     asBlocks:true → вміст малюється звичайними блоками (з урахуванням solo).
+//
+//  2) ТРЕКОВАНИЙ (золотий, рамка+вушко) — молитви/ектенії, що промовляються.
+//     trackMode:"all" → весь вміст трекається, коли розгорнуто (потрібен id).
+//     trackMode:"fav" → трекаються лише ОБРАНІ прохання (✠), решта сірим.
+//     { t:"fold", id:"унікальний-id", title:"Назва", text:"...розгорнути.",
+//       open:false, trackMode:"all"|"fav", section:"<для галереї розділів>",
+//       blocks:[ {t:"header"|"say", ...} ] }
+//
+//  Поля: title — назва в шапці (інакше name→section→text); section — ще й чіп
+//  у галереї розділів; id — ОБОВ'ЯЗКОВИЙ для трекованих (прокрутка/перебудова).
+//  Каркас будує makeFold(), назву дає foldTitle(), дію-підпис — foldAct().
+// ============================================================================
+
 // Назва акордеона для шапки/вушка/липучки — БЕРЕТЬСЯ З ДАНИХ (не зашита в коді).
 // Пріоритет: title → name → section → text. Так новий акордеон лише оголошує свою назву.
 function foldTitle(fb){
   return fb.title || fb.name || fb.section || fb.text || '';
 }
 
-function renderFold(parent, foldBlock, bi){
+// Дія праворуч у шапці/вушку/липучці (світлий, не жирний текст): «· згорнути ↑».
+function foldAct(label){ return '<span class="fold-act"> ' + label + '</span>'; }
+
+// Каркас акордеона: <details> + <summary> з потрібними класами за типом.
+// kind: 'tracked' (золотий, трекований) | 'plain' (сірий звичайний).
+// Повертає {det, sum}. Поведінку (toggle/прокрутку/трекінг) навішує викликач (renderFold).
+// ЄДИНЕ місце, де народжується каркас акордеона — новий вид акордеона лишиться однаковим.
+function makeFold({ id, open, kind }){
   const det = document.createElement('details');
-  det.className = 'b-fold';
-  if (foldBlock.id) det.id = foldBlock.id;
-  if (foldBlock.open) det.open = true;
+  det.className = 'b-fold' + (kind === 'plain' ? ' reg-fold' : '');  // reg-fold = пунктирна рамка
+  if (id) det.id = id;
+  if (open) det.open = true;
   const sum = document.createElement('summary');
   det.appendChild(sum);
+  return { det, sum };
+}
+
+function renderFold(parent, foldBlock, bi){
   const tm = foldBlock.trackMode;                  // 'all' (вся ектенія) | 'fav' (лише обрані) | undefined
   const isTrack = tm === 'all' || tm === 'fav';
-  if (!isTrack) det.classList.add('reg-fold');     // пунктирна рамка через CSS [open]
+  const { det, sum } = makeFold({ id: foldBlock.id, open: foldBlock.open, kind: isTrack ? 'tracked' : 'plain' });
   const foldKey = foldBlock.id || ('reg-' + bi);   // ключ для foldOpenY (закрити «на місці»)
   const foldName = foldTitle(foldBlock);
   // назва звичайного акордеона для єдиних написів «<назва> — розгорнути/згорнути»
@@ -841,10 +870,10 @@ function renderFold(parent, foldBlock, bi){
   const setSumText = () => {
     // трекований: у золотій смузі НАЗВА (жирна) + дія «торкніться…» (світла, не жирна — як у вушку)
     if (isTrack){
-      if (det.open) sum.innerHTML = foldName + '<span class="fold-act"> · згорнути ↑</span>';
+      if (det.open) sum.innerHTML = foldName + foldAct('· згорнути ↑');
       else sum.textContent = foldBlock.text;
     }
-    else sum.innerHTML = regName + '<span class="fold-act"> — ' + (det.open ? 'згорнути ↑' : 'розгорнути ↓') + '</span>';
+    else sum.innerHTML = regName + foldAct('— ' + (det.open ? 'згорнути ↑' : 'розгорнути ↓'));
   };
   setSumText();
 
@@ -904,7 +933,7 @@ function renderFold(parent, foldBlock, bi){
     det.classList.add('framed');
     const close = document.createElement('div');
     close.className = 'fold-close';
-    close.innerHTML = foldName + '<span class="fold-act"> · згорнути ↑</span>';
+    close.innerHTML = foldName + foldAct('· згорнути ↑');
     close.onclick = () => { det.open = false; };
     det.appendChild(close);
   }
@@ -916,7 +945,7 @@ function renderFold(parent, foldBlock, bi){
   if (!isTrack){
     const closeP = document.createElement('div');
     closeP.className = 'fold-close-plain';
-    closeP.innerHTML = regName + '<span class="fold-act"> — згорнути ↑</span>';
+    closeP.innerHTML = regName + foldAct('— згорнути ↑');
     closeP.onclick = () => { det.open = false; };   // toggle сам поверне «на місце»
     det.appendChild(closeP);
   }
@@ -928,7 +957,7 @@ function renderFold(parent, foldBlock, bi){
     ear.className = 'fold-ear';
     det.classList.add('has-ear');
     // той самий формат, що й відкрита смуга: НАЗВА (жирна) + світла дія — в один рядок
-    ear.innerHTML = foldName + '<span class="fold-act"> · розгорнути ↓</span>';
+    ear.innerHTML = foldName + foldAct('· розгорнути ↓');
     ear.onclick = () => {
       // запам'ятати, де зараз вушко на екрані — щоб закрити рівно сюди ж
       const sc = document.getElementById('scroll');
@@ -1044,7 +1073,7 @@ function updateStickyClose(){
   }
   if (target){
     const name = foldTitle(target.b);
-    sticky.innerHTML = name + '<span class="fold-act"> · згорнути ↑</span>';
+    sticky.innerHTML = name + foldAct('· згорнути ↑');
     // та сама ширина/позиція по горизонталі, що й сам акордеон (рамка) — однакова форма
     sticky.style.left = target.dr.left + 'px';
     sticky.style.width = target.dr.width + 'px';
@@ -1618,7 +1647,7 @@ function renderYearBody(){
     // нижня липучка «згорнути» — як у звичайних акордеонах служби
     const close = document.createElement('div');
     close.className = 'fold-close-plain';
-    close.innerHTML = f.name + '<span class="fold-act"> — згорнути ↑</span>';
+    close.innerHTML = f.name + foldAct('— згорнути ↑');
     close.onclick = () => { det.open = false; };
     det.appendChild(close);
 
