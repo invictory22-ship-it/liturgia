@@ -307,6 +307,12 @@
   }
   .sticky-close.show { display: block; }
   .sticky-close::before { content: var(--ic-gold) " "; color: var(--gold-mark); font-size: 12px; }
+  /* сірий варіант липкої смуги — для ЗВИЧАЙНИХ (нетрекованих) акордеонів */
+  .sticky-close.plain {
+    background: var(--fold-bg-strip); border: 1px dashed var(--dash);
+    color: var(--dash-name); font-style: italic;
+  }
+  .sticky-close.plain::before { content: var(--ic-open) " "; color: var(--dash-mark); }
   /* підказка про обране всередині акордеона (по центру, як у Довіднику) */
   .fold-hint { color: #8a8a8a; font-size: 12.5px; line-height: 1.5; margin: 6px 0 14px; text-align: center; }
   .fold-hint .x { color: #e0b94e; }
@@ -867,6 +873,7 @@ function renderFold(parent, foldBlock, bi){
   const foldName = foldTitle(foldBlock);
   // назва звичайного акордеона для єдиних написів «<назва> — розгорнути/згорнути»
   const regName = foldBlock.name || foldBlock.text;
+  det.dataset.foldName = isTrack ? foldName : regName;   // для плаваючої смуги «згорнути»
   const setSumText = () => {
     // трекований: у золотій смузі НАЗВА (жирна) + дія «торкніться…» (світла, не жирна — як у вушку)
     if (isTrack){
@@ -1050,35 +1057,37 @@ function closeOpenFold(){
 
 // Липка смуга «згорнути» над футером зʼявляється ЛИШЕ коли верхня шапка відкритого
 // акордеона пішла за верх екрана, а нижня смуга ще не видна (довгий блок / мобільний).
+// Працює для ВСІХ акордеонів — золотих (трекованих) і сірих (звичайних): однакова
+// поведінка. Закриття — через det.open=false (toggle-handler сам перебудує/поверне прокрутку,
+// як і нижні липучки .fold-close / .fold-close-plain).
 function updateStickyClose(){
   const sticky = document.getElementById('stickyClose');
   if (!sticky) return;
   const scroller = document.getElementById('scroll');
   if (!scroller){ sticky.classList.remove('show'); return; }
   const sr = scroller.getBoundingClientRect();
-  // шукаємо відкритий трекований акордеон, який ЗАРАЗ на екрані і чия верхня шапка
-  // вже пішла за верх, а нижня смуга ще не видна (тоді й потрібна липка смуга)
+  // шукаємо ВІДКРИТИЙ акордеон, який ЗАРАЗ на екрані і чия верхня шапка вже пішла за
+  // верх, а нижня смуга ще не видна (тоді й потрібна липка смуга)
   let target = null;
-  for (const b of activeBlocks){
-    if (b.t !== 'fold' || !b.open || !b.trackMode) continue;
-    const det = document.getElementById(b.id);
-    if (!det) continue;
+  for (const det of scroller.querySelectorAll('details.b-fold[open]')){
     const dr = det.getBoundingClientRect();
     if (dr.bottom <= sr.top || dr.top >= sr.bottom) continue;   // акордеон не на екрані
-    const top = foldHeaderEl(b.id);
-    const bottom = det.querySelector('.fold-close');
+    const top = det.querySelector('summary');
+    const bottom = det.querySelector('.fold-close, .fold-close-plain');
     const topGone = top ? (top.getBoundingClientRect().bottom <= sr.top + 4) : false;
     const bottomVisible = bottom ? (bottom.getBoundingClientRect().top <= sr.bottom - 4) : false;
-    if (topGone && !bottomVisible){ target = { b, dr }; break; }
+    if (topGone && !bottomVisible){ target = { det, dr, isTrack: !det.classList.contains('reg-fold') }; break; }
   }
   if (target){
-    const name = foldTitle(target.b);
-    sticky.innerHTML = name + foldAct('· згорнути ↑');
+    const det = target.det;
+    const act = target.isTrack ? '· згорнути ↑' : '— згорнути ↑';
+    sticky.innerHTML = (det.dataset.foldName || '') + foldAct(act);
+    sticky.classList.toggle('plain', !target.isTrack);   // сірий варіант для звичайних
     // та сама ширина/позиція по горизонталі, що й сам акордеон (рамка) — однакова форма
     sticky.style.left = target.dr.left + 'px';
     sticky.style.width = target.dr.width + 'px';
     sticky.style.bottom = (Math.max(0, window.innerHeight - sr.bottom) + 10) + 'px';
-    sticky.onclick = () => { target.b.open = false; rerenderPreserving(target.b.id); };
+    sticky.onclick = () => { det.open = false; };
     sticky.classList.add('show');
   } else {
     sticky.classList.remove('show');
