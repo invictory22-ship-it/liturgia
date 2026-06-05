@@ -56,6 +56,8 @@
     padding: 4px 8px; font-size: 14px; width: 160px;
   }
   .settings-row input[type=text]::placeholder { color: #666; }
+  /* згрупований блок налаштувань (архієрей) — відділений лініями згори й знизу */
+  .settings-group { border-top: 1px solid #383838; border-bottom: 1px solid #383838; margin-top: 10px; padding: 9px 0; }
 
   .scroll {
     flex: 1; overflow-y: auto; scroll-behavior: smooth;
@@ -135,6 +137,8 @@
     display: inline-flex; align-items: center; transition: color .15s;
   }
   .icon-btn:hover { background: none; border-color: transparent; color: #d0d0d0; }
+  /* активний стан (меню налаштувань відкрите): підсвічена шестерня */
+  .icon-btn.active { color: #d4af6a; background: rgba(212,175,106,.14); border-radius: 8px; }
   .icon-btn svg { display: block; width: 24px; height: 24px; }
   /* іконка з підписом унизу (напр. «Скинути → спочатку») — менша */
   .icon-btn.icon-lbl { flex-direction: column; gap: 1px; padding: 4px 8px; }
@@ -474,20 +478,25 @@
       <label class="radio-lbl"><input type="radio" name="community" value="village"> Село</label>
       <label class="radio-lbl"><input type="radio" name="community" value="monastery"> Монастир</label>
     </div>
-    <div class="settings-row" id="archRow" style="margin-top:10px;">
-      <label>Архієрей (єпарх.):</label>
-      <label class="radio-lbl"><input type="radio" name="archSan" value="bishop"> Єпископ</label>
-      <label class="radio-lbl"><input type="radio" name="archSan" value="archbishop"> Архієпископ</label>
-      <label class="radio-lbl"><input type="radio" name="archSan" value="metropolitan"> Митрополит</label>
-    </div>
-    <div class="settings-row" style="margin-top:6px;">
-      <label for="archName">Ім'я (кого?):</label>
-      <input type="text" id="archName" placeholder="напр. Іоана" autocomplete="off">
-      <label for="archTitle">Титул:</label>
-      <input type="text" id="archTitle" placeholder="напр. Білоцерківського" autocomplete="off">
-    </div>
-    <div class="settings-row" id="archHint" style="margin-top:2px; color:#666; font-size:12px;">
-      Порожнє «Ім'я» — архієрей не поминається. Епіфаній — завжди.
+    <div class="settings-group">
+      <div class="settings-row" id="archRow">
+        <label>Єпархіальний архієрей:</label>
+        <label class="radio-lbl"><input type="radio" name="archSan" value="bishop"> Єпископ</label>
+        <label class="radio-lbl"><input type="radio" name="archSan" value="archbishop"> Архієпископ</label>
+        <label class="radio-lbl"><input type="radio" name="archSan" value="metropolitan"> Митрополит</label>
+      </div>
+      <div class="settings-row" style="margin-top:6px;">
+        <label for="archName">Ім'я (кого?):</label>
+        <input type="text" id="archName" placeholder="напр. Іоана" autocomplete="off">
+      </div>
+      <div class="settings-row" style="margin-top:6px;">
+        <label for="archTitle">Титул:</label>
+        <input type="text" id="archTitle" placeholder="напр. Білоцерківського" autocomplete="off" style="width:200px;">
+      </div>
+      <div class="settings-row" id="archHint" style="margin-top:4px; color:#666; font-size:12px; display:block; line-height:1.45;">
+        Предстоятеля (Митрополита Епіфанія) поминаємо завжди.<br>
+        Єпархіального архієрея — лише якщо вписане «Ім'я».
+      </div>
     </div>
     <div class="settings-row" style="margin-top:10px;">
       <label>Розмір тексту:</label>
@@ -496,13 +505,13 @@
     </div>
     <div class="settings-row" style="margin-top:10px;">
       <input type="checkbox" id="keepAwake">
-      <label for="keepAwake">Не гасити екран</label>
+      <label for="keepAwake">Не вимикати екран</label>
       <span id="keepAwakeNote" style="color:#555;"></span>
     </div>
   </div>
   <div class="section-strip" id="sectionStrip"></div>
   <div class="footer-row">
-    <button class="icon-btn" onclick="toggleSettings()" title="Налаштування" aria-label="Налаштування"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg></button>
+    <button class="icon-btn" id="gearBtn" onclick="toggleSettings()" title="Налаштування" aria-label="Налаштування"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg></button>
     <button class="icon-btn icon-lbl" onclick="reset()" title="Спочатку" aria-label="Спочатку" style="margin-left:16px;"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg><span class="cap">спочатку</span></button>
     <button class="primary" id="btnStart" onclick="toggleListening()">▶ Почати</button>
     <button class="goto-mini" id="gotoBtn" onclick="scrollToCurrent()"><span class="ga" id="gotoArrow">↓</span><span class="gt">до місця<br>зупинки</span></button>
@@ -1217,7 +1226,10 @@ function resetBtn(){
 function toggleListening(){ isListening ? stopListening() : startListening(); }
 function reset(){ currentIndex=0; finalWordCount=0; heardBuffer=[]; stallCount=0; lastScrolledIndex=-1; userScrollPauseUntil=0; updateHighlight(); document.getElementById('heard').textContent=''; }
 function setStatus(m,c){ const s=document.getElementById('status'); s.textContent=m; s.className='status'+(c?' '+c:''); }
-function toggleSettings(){ document.getElementById('settings').classList.toggle('open'); }
+function toggleSettings(){
+  const open = document.getElementById('settings').classList.toggle('open');
+  const g = document.getElementById('gearBtn'); if (g) g.classList.toggle('active', open);
+}
 
 function toggleMenu(){
   document.getElementById('drawer').classList.toggle('open');
