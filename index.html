@@ -49,6 +49,13 @@
   .settings-row input[type=range] { width: 150px; }
   .settings-row label { color: #888; }
   .settings-row input[type=checkbox] { width: 16px; height: 16px; }
+  .settings-row .radio-lbl { color: #ddd; display: inline-flex; align-items: center; gap: 5px; }
+  .settings-row .radio-lbl input[type=radio] { width: 15px; height: 15px; margin: 0; }
+  .settings-row input[type=text] {
+    background: #111; border: 1px solid #444; color: #eee; border-radius: 6px;
+    padding: 4px 8px; font-size: 14px; width: 160px;
+  }
+  .settings-row input[type=text]::placeholder { color: #666; }
 
   .scroll {
     flex: 1; overflow-y: auto; scroll-behavior: smooth;
@@ -461,6 +468,27 @@
       <input type="checkbox" id="soloMode" checked>
       <label for="soloMode">Служу сам (без диякона)</label>
     </div>
+    <div class="settings-row" id="communityRow" style="margin-top:10px;">
+      <label>Тип громади:</label>
+      <label class="radio-lbl"><input type="radio" name="community" value="city"> Місто</label>
+      <label class="radio-lbl"><input type="radio" name="community" value="village"> Село</label>
+      <label class="radio-lbl"><input type="radio" name="community" value="monastery"> Монастир</label>
+    </div>
+    <div class="settings-row" id="archRow" style="margin-top:10px;">
+      <label>Архієрей (єпарх.):</label>
+      <label class="radio-lbl"><input type="radio" name="archSan" value="bishop"> Єпископ</label>
+      <label class="radio-lbl"><input type="radio" name="archSan" value="archbishop"> Архієпископ</label>
+      <label class="radio-lbl"><input type="radio" name="archSan" value="metropolitan"> Митрополит</label>
+    </div>
+    <div class="settings-row" style="margin-top:6px;">
+      <label for="archName">Ім'я (кого?):</label>
+      <input type="text" id="archName" placeholder="напр. Іоана" autocomplete="off">
+      <label for="archTitle">Титул:</label>
+      <input type="text" id="archTitle" placeholder="напр. Білоцерківського" autocomplete="off">
+    </div>
+    <div class="settings-row" id="archHint" style="margin-top:2px; color:#666; font-size:12px;">
+      Порожнє «Ім'я» — архієрей не поминається. Епіфаній — завжди.
+    </div>
     <div class="settings-row" style="margin-top:10px;">
       <label>Розмір тексту:</label>
       <input type="range" id="fontSize" min="20" max="46" value="30">
@@ -483,7 +511,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=21"></script>
+<script src="liturgy-data.js?v=26"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -511,6 +539,60 @@ const BRIDGE_TAIL = 5;         // "близько до кінця молитви
 
 function normalize(w){
   return w.toLowerCase().replace(/[\u2019\u2018\u0027\u0060]/g,"'").replace(/[^\p{L}\u0027]/gu,'').trim();
+}
+
+// === ПІДСТАНОВКА «МІСЦЯ СЛУЖІННЯ» (тип громади) ===
+// У тексті служб стоять плейсхолдери {{...}}; тут вони замінюються на форму за
+// вибором отця (Місто / Село / Монастир). Підставлений текст — РЕАЛЬНИЙ (отець його
+// промовляє), тому він трекається як звичайні слова. За 777 змінюються ЛИШЕ ті місця,
+// де служебник дає варіант (у дужках «(в монастирі — …)»); решта «храму цього» — як є.
+let community = 'city';   // 'city' | 'village' | 'monastery'; завантажується з localStorage
+// Форми за 777, ОКРЕМО для кожної молитви (граматика різна):
+//  храм        — «святого храму цього» / монастир «святого монастиря цього»
+//  парафіяни   — «всіх парафіян святого храму цього» / монастир «братії святого монастиря цього» (без «всіх»)
+//  громада     — анафора «Пом'яни… в якому живемо»: «місто це» / «село» / «монастир»
+//  громада-наш — велика ектенія «За … Господу помолимось»: «місто наше» / «село наше» / «святий монастир наш»
+//  громада-цей — дод. прохання «Церкву Твою святу …»: «місто це» / «село це» / «монастир цей»
+const COMMUNITY_VARS = {
+  city:      { 'храм': 'святого храму цього',     'парафіяни': 'всіх парафіян святого храму цього', 'громада': 'місто це', 'громада-наш': 'місто наше',        'громада-цей': 'місто це'    },
+  village:   { 'храм': 'святого храму цього',     'парафіяни': 'всіх парафіян святого храму цього', 'громада': 'село',     'громада-наш': 'село наше',         'громада-цей': 'село це'     },
+  monastery: { 'храм': 'святого монастиря цього', 'парафіяни': 'братії святого монастиря цього',    'громада': 'монастир',  'громада-наш': 'святий монастир наш', 'громада-цей': 'монастир цей' },
+};
+// --- ЄПАРХІАЛЬНИЙ АРХІЄРЕЙ (поминається ДОДАТКОВО до Епіфанія) ---
+// Епіфаній (предстоятель) у тексті завжди; тут — лише місцевий владика, якого поминає
+// той, хто за межами його єпархії. Вписане імʼя САМЕ вмикає поминання; порожнє — згадка
+// зникає. Сан задає почесну форму. У короткій формі (велика/сугуба ектенія) — лише імʼя;
+// у повній (проскомидія, анафора, «Многая літа») — імʼя + титул.
+let archSan = 'bishop';   // 'bishop' | 'archbishop' | 'metropolitan'
+let archName = '';        // імʼя у родовому: «кого?» — напр. «Іоана»
+let archTitle = '';       // титул у родовому — напр. «Білоцерківського»
+const ARCH_SAN = {
+  bishop:       'Преосвященнійшого єпископа',
+  archbishop:   'Високопреосвященнійшого архієпископа',
+  metropolitan: 'Високопреосвященнійшого митрополита',
+};
+function archShort(){     // форма A: лише імʼя (з провідною комою; «» якщо не заповнено)
+  const n = (archName||'').trim();
+  if (!n) return '';
+  return ', і владику нашого ' + (ARCH_SAN[archSan] || ARCH_SAN.bishop) + ' ' + n;
+}
+function archFull(){      // форми B/C: імʼя + (за наявності) титул
+  const n = (archName||'').trim();
+  if (!n) return '';
+  const t = (archTitle||'').trim();
+  return ', і владику нашого ' + n + ', ' + (ARCH_SAN[archSan] || ARCH_SAN.bishop) + (t ? ' ' + t : '');
+}
+
+function applyVars(text){
+  if (!text || text.indexOf('{{') === -1) return text;
+  const v = COMMUNITY_VARS[community] || COMMUNITY_VARS.city;
+  return text.replace(/\{\{([^}]+)\}\}/g, (m, key) => {
+    const k = key.trim();
+    if (k === 'архієрей') return archShort();
+    if (k === 'архієрей-повний') return archFull();
+    const val = v[k];
+    return (val !== undefined) ? val : m;
+  });
 }
 
 // Маска дужок: для кожного символу true, якщо він у межах ( ) — разом із дужками.
@@ -609,7 +691,7 @@ function appendBlock(parent, block, path){
     const lbl = document.createElement('span');
     lbl.className = 'lbl'; lbl.textContent = (block.role || 'Хор') + ':';
     d.appendChild(lbl);
-    d.appendChild(document.createTextNode(block.text));
+    d.appendChild(document.createTextNode(applyVars(block.text)));
     parent.appendChild(d);
   } else if (block.t === 'image'){
     const fig = document.createElement('div');
@@ -635,9 +717,10 @@ function appendBlock(parent, block, path){
     const txt = document.createElement('div');
     txt.className = 'saytext';
     const tracked = isTracked(block);
+    const sayText = applyVars(block.text);   // підстановка «місця служіння» перед розбивкою
     // Позначаємо, які символи тексту стоять у дужках ( ) — їх не трекаємо
-    const inParen = parenMask(block.text);
-    const tokens = block.text.split(/(\s+)/);
+    const inParen = parenMask(sayText);
+    const tokens = sayText.split(/(\s+)/);
     let offset = 0, wi = 0;
     for (const tok of tokens){
       const start = offset; offset += tok.length;
@@ -674,7 +757,7 @@ function appendBlock(parent, block, path){
       wrap.appendChild(lbl);
     }
     const txt = document.createElement('div');
-    txt.className = 'ptext'; txt.textContent = block.text;
+    txt.className = 'ptext'; txt.textContent = applyVars(block.text);
     wrap.appendChild(txt);
     parent.appendChild(wrap);
   }
@@ -1281,9 +1364,9 @@ function buildFoldInner(det, foldBlock){
           tri.className = 'cat-tri cat-' + cb.cat;
           tri.textContent = '▸ ';
           c.appendChild(tri);
-          c.appendChild(document.createTextNode(cb.text));
+          c.appendChild(document.createTextNode(applyVars(cb.text)));
         } else {
-          c.textContent = cb.text;
+          c.textContent = applyVars(cb.text);
         }
         det.appendChild(c);
       }
@@ -1330,7 +1413,7 @@ function renderPetition(body, g){
       w.appendChild(r);
     }
     const t = document.createElement('div');
-    t.className = 'ref-text'; t.textContent = cb.text;
+    t.className = 'ref-text'; t.textContent = applyVars(cb.text);
     w.appendChild(t);
     body.appendChild(w);
   }
@@ -1501,6 +1584,56 @@ function openYearRef(){
 document.getElementById('soloMode').addEventListener('change',(e)=>{
   soloMode=e.target.checked; currentIndex=0; finalWordCount=0; render();
 });
+
+// --- ТИП ГРОМАДИ (місце служіння) ---
+// Памʼятає вибір на пристрої; підставляється в усі служби (universal). При зміні —
+// перемальовуємо з нуля, бо змінюються самі слова (а отже й трековані позиції).
+(function initCommunity(){
+  try { community = localStorage.getItem('liturgia_community') || 'city'; } catch(_){}
+  if (!COMMUNITY_VARS[community]) community = 'city';
+  document.querySelectorAll('input[name="community"]').forEach(r=>{
+    r.checked = (r.value === community);
+    r.addEventListener('change', (e)=>{
+      if (!e.target.checked) return;
+      community = e.target.value;
+      try { localStorage.setItem('liturgia_community', community); } catch(_){}
+      currentIndex=0; finalWordCount=0; render();
+    });
+  });
+})();
+
+// --- ЄПАРХІАЛЬНИЙ АРХІЄРЕЙ (сан + імʼя + титул) ---
+(function initArch(){
+  try {
+    archSan   = localStorage.getItem('liturgia_arch_san')   || 'bishop';
+    archName  = localStorage.getItem('liturgia_arch_name')  || '';
+    archTitle = localStorage.getItem('liturgia_arch_title') || '';
+  } catch(_){}
+  if (!ARCH_SAN[archSan]) archSan = 'bishop';
+  const nameEl = document.getElementById('archName');
+  const titleEl = document.getElementById('archTitle');
+  if (nameEl)  nameEl.value  = archName;
+  if (titleEl) titleEl.value = archTitle;
+  document.querySelectorAll('input[name="archSan"]').forEach(r=>{
+    r.checked = (r.value === archSan);
+    r.addEventListener('change', (e)=>{
+      if (!e.target.checked) return;
+      archSan = e.target.value;
+      try { localStorage.setItem('liturgia_arch_san', archSan); } catch(_){}
+      currentIndex=0; finalWordCount=0; render();
+    });
+  });
+  if (nameEl) nameEl.addEventListener('input', (e)=>{
+    archName = e.target.value;
+    try { localStorage.setItem('liturgia_arch_name', archName); } catch(_){}
+    currentIndex=0; finalWordCount=0; render();
+  });
+  if (titleEl) titleEl.addEventListener('input', (e)=>{
+    archTitle = e.target.value;
+    try { localStorage.setItem('liturgia_arch_title', archTitle); } catch(_){}
+    currentIndex=0; finalWordCount=0; render();
+  });
+})();
 document.getElementById('fontSize').addEventListener('input',(e)=>{
   const v=e.target.value; document.getElementById('fontOut').textContent=v;
   // CSS-змінна на <html> — застосовується до всіх .saytext і ПЕРЕЖИВАЄ перемальовування
