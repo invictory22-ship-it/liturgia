@@ -383,6 +383,12 @@
   .feast-legend .cat-great     { color: var(--cat-great); }      /* Велике — золотий */
   .ref-feast.cat-saint     .feast-name::before,
   .feast-legend .cat-saint     { color: var(--cat-saint); }      /* Святого — зелений */
+  /* кольоровий трикутник перед рядком-варіантом усередині акордеона */
+  .cat-tri { font-weight: 700; }
+  .cat-tri.cat-gold      { color: var(--cat-great); }            /* жовтий/золотий */
+  .cat-tri.cat-theotokos { color: var(--cat-theotokos); }        /* блакитний */
+  .cat-tri.cat-lord      { color: var(--cat-lord); }
+  .cat-tri.cat-saint     { color: var(--cat-saint); }
   .feast-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center;
     margin: 0 0 16px; color: #8a8a8a; font-size: 12.5px; }
   .feast-legend > span { display: inline-flex; align-items: center; gap: 5px; }
@@ -477,7 +483,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=16"></script>
+<script src="liturgy-data.js?v=17"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1269,7 +1275,16 @@ function buildFoldInner(det, foldBlock){
     } else {
       for (const cb of g.prayers){
         const c = document.createElement('div');
-        c.className = 'b-stage'; c.textContent = cb.text;
+        c.className = 'b-stage';
+        if (cb.cat){
+          const tri = document.createElement('span');
+          tri.className = 'cat-tri cat-' + cb.cat;
+          tri.textContent = '▸ ';
+          c.appendChild(tri);
+          c.appendChild(document.createTextNode(cb.text));
+        } else {
+          c.textContent = cb.text;
+        }
         det.appendChild(c);
       }
     }
