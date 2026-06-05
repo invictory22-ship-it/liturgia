@@ -187,89 +187,109 @@
     .b-title { font-size: 21px; }
     .topbar h1 { display: none; }
   }
+  /* === АКОРДЕОНИ: спільні константи (гілка I) ===
+     Усі кольори/маркери акордеонів беруться ЗВІДСИ. Зміна відтінку — в одному місці. */
+  :root{
+    /* Золотий (трекований акордеон) */
+    --gold-text:#e7c587; --gold-mark:#c8902f; --gold-name:#b09560; --gold-dim:#9a8a5f;
+    --gold-border:#5a4a28; --gold-border-soft:#6a5526; --gold-bg:#110e07;
+    --gold-strip-1:#241d10; --gold-strip-2:#16110a;     /* градієнт смуги (верх→низ) */
+    --gold-strip-h1:#2c2414; --gold-strip-h2:#1a140b;   /* той самий, при наведенні */
+    /* Сірий (звичайний акордеон) */
+    --dash:#3a3320; --dash-mark:#6a5f3a; --dash-text:#9a8a5f; --dash-name:#b09560;
+    --fold-bg:#0d0d0d; --fold-bg-strip:#110f0a; --fold-hover:#141414;
+    /* Картка свята (Довідник) */
+    --feast-border:#262015; --feast-bg:#131210; --feast-strip:#17150f;
+    --feast-name:#c9a96a; --feast-meta:#8a7a52; --feast-line:#1c1a14;
+    --feast-lbl:#a8915c; --feast-txt:#e8e2d0;
+    /* Маркери-гліфи (символ перед шапкою; пробіл додається в правилі, де треба) */
+    --ic-gold:"\2726"; --ic-closed:"\25b8"; --ic-open:"\25be";
+    /* Категорії свят */
+    --cat-lord:#cf6a4a; --cat-theotokos:#5b9bd5; --cat-great:#d2a24c; --cat-saint:#6fae6f;
+  }
   /* FOLD */
   .b-fold { margin: 20px auto 20px 0; max-width: 680px; }
   .b-fold > summary {
-    color: #9a8a5f; font-size: 14px; font-style: italic; cursor: pointer;
-    list-style: none; padding: 9px 14px; border: 1px dashed #3a3320;
+    color: var(--dash-text); font-size: 14px; font-style: italic; cursor: pointer;
+    list-style: none; padding: 9px 14px; border: 1px dashed var(--dash);
     border-radius: 8px; user-select: none;
   }
   .b-fold > summary::-webkit-details-marker { display: none; }
-  .b-fold > summary::before { content: "\25b8 "; color: #6a5f3a; }
-  .b-fold[open] > summary::before { content: "\25be "; }
-  .b-fold > summary:hover { background: #141414; }
+  .b-fold > summary::before { content: var(--ic-closed) " "; color: var(--dash-mark); }
+  .b-fold[open] > summary::before { content: var(--ic-open) " "; }
+  .b-fold > summary:hover { background: var(--fold-hover); }
   .b-fold[open] > summary {
-    margin-bottom: 8px; color: #b09560;
-    position: sticky; top: 0; z-index: 5; background: #0d0d0d;
+    margin-bottom: 8px; color: var(--dash-name);
+    position: sticky; top: 0; z-index: 5; background: var(--fold-bg);
   }
-  .b-fold .b-stage { margin: 10px 0; border-left-color: #3a3320; }
+  .b-fold .b-stage { margin: 10px 0; border-left-color: var(--dash); }
   .fold-h { display: flex; align-items: flex-start; gap: 8px;
-    color: #9a8a5f; font-size: 14px; font-weight: 600; margin: 16px 0 4px; }
-  .fold-favnote { color: #b09560; font-size: 12px; text-transform: uppercase;
+    color: var(--dash-text); font-size: 14px; font-weight: 600; margin: 16px 0 4px; }
+  .fold-favnote { color: var(--dash-name); font-size: 12px; text-transform: uppercase;
     letter-spacing: .05em; margin: 8px 0 4px; }
   /* «вушко» — золотий ярлик над згорнутим трекованим акордеоном, щоб помітити раніше */
   .fold-ear {
     max-width: 680px; margin: 22px 0 0 0;
-    color: #e7c587; font-size: 13.5px; font-weight: 600; letter-spacing: .02em;
-    background: linear-gradient(180deg, #241d10, #16110a);
-    border: 1px solid #6a5526; border-bottom: none;
+    color: var(--gold-text); font-size: 13.5px; font-weight: 600; letter-spacing: .02em;
+    background: linear-gradient(180deg, var(--gold-strip-1), var(--gold-strip-2));
+    border: 1px solid var(--gold-border-soft); border-bottom: none;
     border-radius: 10px 10px 0 0; padding: 8px 16px; cursor: pointer; user-select: none;
   }
-  .fold-ear::before { content: "✦"; color: #c8902f; font-size: 12px; }
-  .fold-ear .ear-go { margin-left: auto; color: #9a8a5f; font-weight: 400; font-size: 12px; }
-  .fold-act { font-weight: 400; color: #9a8a5f; font-size: 12px; }
-  .fold-ear:hover { background: linear-gradient(180deg, #2c2414, #1a140b); }
+  .fold-ear::before { content: var(--ic-gold); color: var(--gold-mark); font-size: 12px; }
+  .fold-ear .ear-go { margin-left: auto; color: var(--gold-dim); font-weight: 400; font-size: 12px; }
+  .fold-act { font-weight: 400; color: var(--gold-dim); font-size: 12px; }
+  .fold-ear:hover { background: linear-gradient(180deg, var(--gold-strip-h1), var(--gold-strip-h2)); }
   /* коли є вушко — золоте вушко і Є шапкою; стара пунктирна шапка ховається (без дубля) */
   .b-fold.has-ear { margin-top: 0; }
   .b-fold.has-ear > summary { display: none; }
 
   /* РОЗГОРНУТИЙ трекований акордеон = обмежена картка з рамкою по боках */
   .b-fold[open].framed {
-    border: 1px solid #5a4a28; border-radius: 10px;
-    background: #110e07; padding: 0 16px; margin: 0 0 22px 0;
+    border: 1px solid var(--gold-border); border-radius: 10px;
+    background: var(--gold-bg); padding: 0 16px; margin: 0 0 22px 0;
   }
   .b-fold[open].framed > summary {        /* верхня золота смуга, БЕЗ залипання */
     position: static; margin: 0 -16px 12px -16px;
-    border: none; border-bottom: 1px solid #5a4a28; border-radius: 9px 9px 0 0;
-    background: linear-gradient(180deg, #241d10, #16110a);
-    color: #e7c587; font-style: normal; font-weight: 600; font-size: 13.5px; padding: 9px 16px;
+    border: none; border-bottom: 1px solid var(--gold-border); border-radius: 9px 9px 0 0;
+    background: linear-gradient(180deg, var(--gold-strip-1), var(--gold-strip-2));
+    color: var(--gold-text); font-style: normal; font-weight: 600; font-size: 13.5px; padding: 9px 16px;
   }
-  .b-fold[open].framed > summary::before { content: "✦ "; color: #c8902f; font-size: 12px; }
+  .b-fold[open].framed > summary::before { content: var(--ic-gold) " "; color: var(--gold-mark); font-size: 12px; }
   .b-fold[open].framed .b-stage { border-left-color: transparent; }  /* рамка вже окреслює межі */
   /* прибрати пунктир у перехідну мить між закриттям і перемалюванням (щоб не мигало) */
   .b-fold.framed > summary { border: none; }
   /* нижній золотий ярлик «згорнути» — закриває рамку знизу, симетрично до верху */
   /* нижня смуга рамки — у самому кінці блоку (закриває рамку знизу) */
   .fold-close {
-    margin: 14px -16px 0 -16px; border-top: 1px solid #5a4a28; border-radius: 0 0 9px 9px;
-    background: linear-gradient(180deg, #16110a, #241d10);
-    color: #e7c587; font-weight: 600; font-size: 13.5px;
+    margin: 14px -16px 0 -16px; border-top: 1px solid var(--gold-border); border-radius: 0 0 9px 9px;
+    background: linear-gradient(180deg, var(--gold-strip-2), var(--gold-strip-1));
+    color: var(--gold-text); font-weight: 600; font-size: 13.5px;
     padding: 10px 16px; text-align: center; cursor: pointer; user-select: none;
   }
-  .fold-close::before { content: "✦ "; color: #c8902f; font-size: 12px; }
-  .fold-close:hover { background: linear-gradient(180deg, #1a140b, #2c2414); }
+  .fold-close::before { content: var(--ic-gold) " "; color: var(--gold-mark); font-size: 12px; }
+  .fold-close:hover { background: linear-gradient(180deg, var(--gold-strip-h2), var(--gold-strip-h1)); }
   /* нижня липучка «згорнути» для ЗВИЧАЙНИХ (нетрекованих) акордеонів — у їхньому сірому стилі */
   .fold-close-plain {
     max-width: 680px; margin: 12px 0 0 0;
-    color: #9a8a5f; font-size: 13.5px; font-style: italic;
-    border: 1px dashed #3a3320; border-radius: 8px;
+    color: var(--dash-text); font-size: 13.5px; font-style: italic;
+    border: 1px dashed var(--dash); border-radius: 8px;
     padding: 9px 14px; text-align: center; cursor: pointer; user-select: none;
   }
-  .fold-close-plain::before { content: "\25be "; color: #6a5f3a; }
-  .fold-close-plain:hover { background: #141414; }
+  .fold-close-plain::before { content: var(--ic-open) " "; color: var(--dash-mark); }
+  .fold-close-plain:hover { background: var(--fold-hover); }
   /* РОЗГОРНУТИЙ звичайний акордеон = картка з пунктирною рамкою (видно межі блоку
      зверху до низу, як у Додаткових проханнях, але в сірому стилі) */
   .b-fold.reg-fold[open] {
-    border: 1px dashed #3a3320; border-radius: 10px;
-    background: #0d0d0d; padding: 0 16px; margin: 20px 0 22px 0;
+    border: 1px dashed var(--dash); border-radius: 10px;
+    background: var(--fold-bg); padding: 0 16px; margin: 20px 0 22px 0;
   }
   .b-fold.reg-fold[open] > summary {            /* шапка = верхня смуга рамки, БЕЗ залипання */
     position: static; margin: 0 -16px 12px -16px;
-    border: none; border-bottom: 1px dashed #3a3320; border-radius: 9px 9px 0 0;
-    background: #110f0a; color: #b09560; padding: 9px 16px;
+    border: none; border-bottom: 1px dashed var(--dash); border-radius: 9px 9px 0 0;
+    background: var(--fold-bg-strip); color: var(--dash-name); padding: 9px 16px;
   }
   .b-fold.reg-fold[open] .fold-close-plain {    /* липучка = нижня смуга рамки */
-    margin: 12px -16px 0 -16px; border: none; border-top: 1px dashed #3a3320;
+    margin: 12px -16px 0 -16px; border: none; border-top: 1px dashed var(--dash);
     border-radius: 0 0 9px 9px;
   }
   .b-fold.reg-fold[open] .b-stage {             /* рамка вже окреслює межі — ліва смужка ремарки зайва */
@@ -279,14 +299,14 @@
      Та сама форма/ширина, що й нижня смуга рамки (left/width задаються в JS за акордеоном). */
   .sticky-close {
     position: fixed; z-index: 44; display: none; box-sizing: border-box;
-    background: linear-gradient(180deg, #16110a, #241d10);
-    border: 1px solid #5a4a28; border-radius: 0 0 9px 9px;   /* верх рівний, низ заокруглений — як низ рамки */
-    color: #e7c587; font-weight: 600; font-size: 13.5px;
+    background: linear-gradient(180deg, var(--gold-strip-2), var(--gold-strip-1));
+    border: 1px solid var(--gold-border); border-radius: 0 0 9px 9px;   /* верх рівний, низ заокруглений — як низ рамки */
+    color: var(--gold-text); font-weight: 600; font-size: 13.5px;
     padding: 10px 16px; text-align: center; cursor: pointer; user-select: none;
     box-shadow: 0 6px 18px rgba(0,0,0,.55);
   }
   .sticky-close.show { display: block; }
-  .sticky-close::before { content: "✦ "; color: #c8902f; font-size: 12px; }
+  .sticky-close::before { content: var(--ic-gold) " "; color: var(--gold-mark); font-size: 12px; }
   /* підказка про обране всередині акордеона (по центру, як у Довіднику) */
   .fold-hint { color: #8a8a8a; font-size: 12.5px; line-height: 1.5; margin: 6px 0 14px; text-align: center; }
   .fold-hint .x { color: #e0b94e; }
@@ -381,19 +401,18 @@
   .ref-say .ref-role { color: #777; font-size: 12px; margin-bottom: 3px; }
   .ref-text { font-size: 20px; line-height: 1.5; color: #e8e2d0; }
   /* ДОВІДНИК «НА ВЕСЬ РІК» — картка свята (по святах) */
-  .ref-feast { margin: 10px 0; border: 1px solid #262015; border-radius: 10px;
-    overflow: hidden; background: #131210; }
+  .ref-feast { margin: 10px 0; border: 1px solid var(--feast-border); border-radius: 10px;
+    overflow: hidden; background: var(--feast-bg); }
   .ref-feast > summary { list-style: none; cursor: pointer; padding: 12px 16px;
-    background: #17150f; }
+    background: var(--feast-strip); }
   .ref-feast > summary::-webkit-details-marker { display: none; }
-  .ref-feast[open] > summary { border-bottom: 1px solid #262015; }
+  .ref-feast[open] > summary { border-bottom: 1px solid var(--feast-border); }
   /* рядок 1 — назва (стрілочка-маркер кольором за типом свята), рядок 2 — дата */
-  .ref-feast .feast-name { color: #c9a96a; font-size: 17px; }
-  .ref-feast .feast-name::before { content: "\25b8 "; color: #6a5f3a; }
-  .ref-feast[open] .feast-name::before { content: "\25be "; }
-  .ref-feast .feast-meta { margin: 4px 0 0 18px; color: #8a7a52; font-size: 13px; }
-  /* кольори категорій свят — ЄДИНЕ ДЖЕРЕЛО (CSS-змінні; далі — у спільні константи гілки I) */
-  :root { --cat-lord: #cf6a4a; --cat-theotokos: #5b9bd5; --cat-great: #d2a24c; --cat-saint: #6fae6f; }
+  .ref-feast .feast-name { color: var(--feast-name); font-size: 17px; }
+  .ref-feast .feast-name::before { content: var(--ic-closed) " "; color: var(--dash-mark); }
+  .ref-feast[open] .feast-name::before { content: var(--ic-open) " "; }
+  .ref-feast .feast-meta { margin: 4px 0 0 18px; color: var(--feast-meta); font-size: 13px; }
+  /* кольори категорій свят — зі спільної палітри (:root угорі) */
   .ref-feast.cat-lord      .feast-name::before,
   .feast-legend .cat-lord      { color: var(--cat-lord); }       /* Господнє — червоний */
   .ref-feast.cat-theotokos .feast-name::before,
@@ -412,16 +431,16 @@
     margin: 0 0 16px; color: #8a8a8a; font-size: 12.5px; }
   .feast-legend > span { display: inline-flex; align-items: center; gap: 5px; }
   .feast-legend .tri { font-size: 15px; line-height: 1; }
-  .ref-row { padding: 11px 16px; border-top: 1px solid #1c1a14; }
+  .ref-row { padding: 11px 16px; border-top: 1px solid var(--feast-line); }
   .ref-row:first-of-type { border-top: none; }
-  .ref-row-lbl { color: #a8915c; font-size: 12px; text-transform: uppercase;
+  .ref-row-lbl { color: var(--feast-lbl); font-size: 12px; text-transform: uppercase;
     letter-spacing: .3px; margin-bottom: 3px; }
-  .ref-row-txt { color: #e8e2d0; font-size: 18px; line-height: 1.5; }
+  .ref-row-txt { color: var(--feast-txt); font-size: 18px; line-height: 1.5; }
   /* стих — у ТОМУ Ж блоці, що й прокимен (без роздільної риски), лиш дрібніший курсив */
   .ref-stih { color: #9a9a9a; font-size: 16px; font-style: italic; line-height: 1.5; margin-top: 7px; }
   /* нижня липучка «згорнути» картки свята — у стилі звичайних акордеонів (.fold-close-plain) */
-  .ref-feast .fold-close-plain { margin: 0; border: none; border-top: 1px solid #262015;
-    border-radius: 0; color: #8a7a52; }
+  .ref-feast .fold-close-plain { margin: 0; border: none; border-top: 1px solid var(--feast-border);
+    border-radius: 0; color: var(--feast-meta); }
 </style>
 </head>
 <body>
