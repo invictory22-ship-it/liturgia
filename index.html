@@ -322,6 +322,13 @@
   .drawer a:hover { background: #1c1c1c; }
   .drawer a.soon { color: #555; cursor: default; }
   .drawer a.soon:hover { background: transparent; }
+  /* активна (поточна) служба — золотим */
+  .drawer a.active-svc { color: #d4af6a; font-weight: 600; }
+  /* згортувана група служб (напр. пасхальні — раз на рік) */
+  .drawer-fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .drawer-fold > summary::-webkit-details-marker { display: none; }
+  .drawer-fold .df-mark { font-size: 10px; color: #777; transition: transform .15s; }
+  .drawer-fold[open] .df-mark { transform: rotate(180deg); }
   /* короткий спалах на акордеоні, куди стрибнули з меню */
   .flash-target > summary { animation: flashGlow 1.6s ease; }
   @keyframes flashGlow {
@@ -428,15 +435,13 @@
     <div class="drawer-head">Зміст</div>
 
     <div class="drawer-group">Служби</div>
-    <a onclick="toggleMenu(); loadService('liturgy')">Літургія Іоана Золотоустого</a>
+    <a data-svc="liturgy" onclick="toggleMenu(); loadService('liturgy')">Літургія Іоана Золотоустого</a>
 
-    <div class="drawer-group">Пасхальні служби</div>
-    <a onclick="toggleMenu(); loadService('pascha-liturgy')">Пасхальна Літургія</a>
-    <a onclick="toggleMenu(); loadService('pasky')">Благословення і освячення пасок</a>
-
-    <div class="drawer-group">Літургія — перейти до</div>
-    <a onclick="jumpTo('dod-velyka')">Велика ектенія — додаткові прохання</a>
-    <a onclick="jumpTo('dod-potrijna')">Потрійна ектенія — додаткові прохання</a>
+    <details class="drawer-fold" id="paschaFold">
+      <summary class="drawer-group">Пасхальні служби <span class="df-mark">▾</span></summary>
+      <a data-svc="pascha-liturgy" onclick="toggleMenu(); loadService('pascha-liturgy')">Пасхальна Літургія</a>
+      <a data-svc="pasky" onclick="toggleMenu(); loadService('pasky')">Благословення і освячення пасок</a>
+    </details>
 
     <div class="drawer-group">Довідник</div>
     <a onclick="openReference()">Додаткові прохання на ектеніях</a>
@@ -655,6 +660,7 @@ function loadService(id){
   currentIndex = 0; finalWordCount = 0;
   closeReference();
   render();
+  markActiveService();
   const sc = document.getElementById('scroll'); if (sc) sc.scrollTop = 0;
 }
 
@@ -1235,27 +1241,18 @@ function toggleSettings(){
 }
 
 function toggleMenu(){
-  document.getElementById('drawer').classList.toggle('open');
+  const open = document.getElementById('drawer').classList.toggle('open');
   document.getElementById('drawerOverlay').classList.toggle('open');
+  if (open) markActiveService();
 }
-// "Стрибок" з меню: закрити шухляду, розгорнути акордеон, прокрутити до нього, блимнути.
-function jumpTo(id){
-  if (currentServiceId !== 'liturgy') loadService('liturgy');   // переходи в службу — на Літургії
-  toggleMenu();
-  closeReference();              // якщо була відкрита довідка — закрити, ми йдемо в службу
-  // трекований акордеон розгортаємо СИНХРОННО (з перебудовою сторінки), інакше
-  // після перемальовування старий елемент відʼєднається і скрол/спалах не спрацюють
-  const b = activeBlocks.find(x => x.t === 'fold' && x.id === id);
-  if (b && b.trackMode && !b.open){ b.open = true; rerenderPreserving(); }
-  const el = document.getElementById(id);   // свіжий елемент (після можливої перебудови)
-  if(!el) return;
-  el.open = true;                // звичайний акордеон: розгорнути (трекований уже відкритий)
-  el.scrollIntoView({behavior:'smooth', block:'start'});
-  el.classList.remove('flash-target');
-  void el.offsetWidth;            // перезапуск анімації
-  el.classList.add('flash-target');
+// Підсвітити в меню поточну службу (золотим). Якщо активна — пасхальна, розгорнути її групу.
+function markActiveService(){
+  document.querySelectorAll('.drawer a[data-svc]').forEach(a=>{
+    a.classList.toggle('active-svc', a.getAttribute('data-svc') === currentServiceId);
+  });
+  const pf = document.getElementById('paschaFold');
+  if (pf && (currentServiceId === 'pascha-liturgy' || currentServiceId === 'pasky')) pf.open = true;
 }
-
 // --- ОБРАНЕ (зберігається на цьому пристрої) ---
 // Ключ прохання = текст його заголовка. Обране тримаємо як список таких ключів.
 function loadFavs(){
