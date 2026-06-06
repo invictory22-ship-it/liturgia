@@ -553,7 +553,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=27"></script>
+<script src="liturgy-data.js?v=28"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1647,6 +1647,8 @@ function renderYearBody(){
       det.appendChild(row);
     };
 
+    addProk('Тропар', f.tropar);
+    addProk('Кондак', f.kondak);
     addRow('Величання', f.velychannia);
     addProk('Прокимен на ранній', f.prokMatins);
     addProk('Прокимен великий на вечірній', f.prokVespers);
