@@ -554,7 +554,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=32"></script>
+<script src="liturgy-data.js?v=33"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1648,8 +1648,18 @@ function renderYearBody(){
       det.appendChild(row);
     };
 
-    addProk('Тропар', f.tropar);
-    addProk('Кондак', f.kondak);
+    // Кілька празнувань в один день (напр. Обрізання + Василій + Петро Могила):
+    // масив f.hymns = [{ label, tropar:{glas,text}, kondak:{glas,text} }, …].
+    // Інакше — один тропар/кондак свята (f.tropar/f.kondak).
+    if (Array.isArray(f.hymns)){
+      f.hymns.forEach(h => {
+        addProk('Тропар — ' + h.label, h.tropar);
+        addProk('Кондак — ' + h.label, h.kondak);
+      });
+    } else {
+      addProk('Тропар', f.tropar);
+      addProk('Кондак', f.kondak);
+    }
     addRow('Величання', f.velychannia);
     addProk('Прокимен на ранній', f.prokMatins);
     addProk('Прокимен великий на вечірній', f.prokVespers);
