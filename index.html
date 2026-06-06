@@ -554,7 +554,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=33"></script>
+<script src="liturgy-data.js?v=34"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1663,8 +1663,18 @@ function renderYearBody(){
     addRow('Величання', f.velychannia);
     addProk('Прокимен на ранній', f.prokMatins);
     addProk('Прокимен великий на вечірній', f.prokVespers);
+    // Прокимен(и) на Літургію — масив {label?,glas,text} (кілька празнувань) або один об'єкт
+    if (Array.isArray(f.prokLiturgy))
+      f.prokLiturgy.forEach(p => addProk('Прокимен на Літургію' + (p.label ? ' — ' + p.label : ''), p));
+    else addProk('Прокимен на Літургію', f.prokLiturgy);
     addRow('Вхідне', f.vhidne);
+    // Причасний(і) — масив {label?,text} або один рядок
+    if (Array.isArray(f.prychasen))
+      f.prychasen.forEach(p => addRow('Причасний' + (p.label ? ' — ' + p.label : ''), p.text));
+    else if (f.prychasen) addRow('Причасний', f.prychasen.text || f.prychasen);
     addRow('Відпуст', f.vidpust);
+    // Молитва (напр. свт. Петру Могилі) — окремий рядок
+    if (f.prayer) addRow(f.prayer.label || 'Молитва', f.prayer.text);
 
     // нижня липучка «згорнути» — як у звичайних акордеонах служби
     const close = document.createElement('div');
