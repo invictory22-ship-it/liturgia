@@ -32,6 +32,15 @@ try:
                 errors.append('liturgy-data.js: свято #%d без name' % i)
                 break
 
+    # --- GLASI (необов'язковий: 8 гласів, тропар/кондак) ---
+    mg = re.search(r'const GLASI = (\[[\s\S]*?\n\]);', txt)
+    if mg:
+        glasi = json.loads(mg.group(1))
+        for i, g in enumerate(glasi):
+            if 'glas' not in g:
+                errors.append('liturgy-data.js: глас #%d без glas' % i)
+                break
+
     # --- PASKY та інші служби (масиви блоків, як BLOCKS) ---
     for name in ('PASKY', 'PASKHA_LITURGY'):
         ms = re.search(r'const %s = (\[[\s\S]*?\n\]);' % name, txt)
