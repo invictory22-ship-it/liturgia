@@ -452,6 +452,18 @@
   /* «На Літургії» — золотий банер, щоб одразу вирізнявся */
   .ref-feast-sec--lit { color: #1a150a; background: linear-gradient(180deg,#dcbb6e,#c8a455);
     font-size: 17px; letter-spacing: 1.2px; padding: 13px 16px; border-color: #b8964a; }
+  /* Антифони свята — згортний блок у картці */
+  .ref-ant { border-top: 1px solid var(--feast-line); }
+  .ref-ant-head { cursor: pointer; padding: 12px 16px; color: var(--feast-lbl);
+    font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; user-select: none; }
+  .ref-ant-head::before { content: "\25b8\00a0"; color: var(--feast-meta); }
+  .ref-ant.open .ref-ant-head::before { content: "\25be\00a0"; }
+  .ref-ant-body { display: none; padding: 0 16px 12px; }
+  .ref-ant.open .ref-ant-body { display: block; }
+  .ref-ant-lbl { color: var(--feast-meta); font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .4px; margin: 10px 0 4px; }
+  .ref-ant-stih { color: var(--feast-txt); font-size: 18px; line-height: 1.45; margin-bottom: 2px; }
+  .ref-ant-pr { color: #b0a98f; font-size: 16px; font-style: italic; margin: 3px 0 5px; }
   /* нижня липучка «згорнути» картки свята — у стилі звичайних акордеонів (.fold-close-plain) */
   .ref-feast .fold-close-plain { margin: 0; border: none; border-top: 1px solid var(--feast-border);
     border-radius: 0; color: var(--feast-meta); }
@@ -563,7 +575,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=57"></script>
+<script src="liturgy-data.js?v=58"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1697,6 +1709,28 @@ function renderYearBody(){
     // ── На Літургії ── (за порядком служби: вхідне → тропар/кондак → прокимен → алилуарій →
     //    задостойник → причасний → відпуст)
     addSec('На Літургії', 'lit');
+    // Антифони свята — згортний блок (лише великі Господські)
+    if (Array.isArray(f.antyfony)){
+      const wrap = document.createElement('div'); wrap.className = 'ref-ant';
+      const head = document.createElement('div'); head.className = 'ref-ant-head';
+      head.textContent = 'Антифони свята';
+      const body = document.createElement('div'); body.className = 'ref-ant-body';
+      head.addEventListener('click', () => wrap.classList.toggle('open'));
+      f.antyfony.forEach(ant => {
+        const al = document.createElement('div'); al.className = 'ref-ant-lbl';
+        al.textContent = ant.label; body.appendChild(al);
+        (ant.stychy || []).forEach(s => {
+          const sl = document.createElement('div'); sl.className = 'ref-ant-stih';
+          sl.textContent = s; body.appendChild(sl);
+        });
+        if (ant.pryspiv){
+          const pr = document.createElement('div'); pr.className = 'ref-ant-pr';
+          pr.textContent = 'Приспів: ' + ant.pryspiv; body.appendChild(pr);
+        }
+      });
+      wrap.appendChild(head); wrap.appendChild(body);
+      det.appendChild(wrap);
+    }
     addRow('Вхідне', f.vhidne);
     // Тропар/кондак: кілька празнувань (f.hymns=[{label,tropar,kondak}]) або одне свято
     if (Array.isArray(f.hymns)){
