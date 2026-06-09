@@ -50,6 +50,15 @@ try:
                 errors.append('liturgy-data.js: денний #%d без day/rows' % i)
                 break
 
+    # --- ZAHALNI (необов'язковий: загальні святим за чином) ---
+    mz = re.search(r'const ZAHALNI = (\[[\s\S]*?\n\]);', txt)
+    if mz:
+        zahalni = json.loads(mz.group(1))
+        for i, z in enumerate(zahalni):
+            if 'chyn' not in z:
+                errors.append('liturgy-data.js: ZAHALNI #%d без chyn' % i)
+                break
+
     # --- PASKY та інші служби (масиви блоків, як BLOCKS) ---
     for name in ('PASKY', 'PASKHA_LITURGY'):
         ms = re.search(r'const %s = (\[[\s\S]*?\n\]);' % name, txt)

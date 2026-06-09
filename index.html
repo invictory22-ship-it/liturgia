@@ -507,6 +507,7 @@
     <a onclick="openYearRef()">Прокимни, величання, відпусти</a>
     <a onclick="openGlasiRef()">Недільні тропарі й кондаки (8 гласів)</a>
     <a onclick="openDenniRef()">Прокимни, алилуї, причасні денні</a>
+    <a onclick="openZahalniRef()">Загальні святим за чином (святителю, апостолу, мученику…)</a>
     <a class="soon">Наука про відпусти</a>
     <a class="soon">Молитви перед / після Причастя</a>
 
@@ -589,7 +590,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=63"></script>
+<script src="liturgy-data.js?v=64"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1928,6 +1929,59 @@ function renderDenniBody(){
 }
 function openDenniRef(){
   openRefPage('Прокимни, алилуї, причасні денні (за днями тижня)', renderDenniBody);
+}
+
+// Загальні святим ЗА ЧИНОМ — словник ZAHALNI. Кожен чин = акордеон.
+function renderZahalniBody(){
+  const body = document.getElementById('refBody');
+  body.innerHTML = '';
+  const intro = document.createElement('div');
+  intro.className = 'ref-hint';
+  intro.innerHTML = 'Загальні тропар, кондак і пропрії на Літургії за <b>чином</b> святого (святителю, апостолу, мученику…). «(ім’я)» — підставляється ім’я святого. Прокимен/алилуарій/причасний/зачала спільні для чину; конкретне свято може мати своє.';
+  body.appendChild(intro);
+
+  const ZZ = (typeof ZAHALNI !== 'undefined') ? ZAHALNI : [];
+  ZZ.forEach(z => {
+    const det = document.createElement('details');
+    det.className = 'ref-feast';
+    det.addEventListener('toggle', updateStickyClose);
+    const sum = document.createElement('summary');
+    const nm = document.createElement('div');
+    nm.className = 'feast-name'; nm.textContent = z.chyn;
+    sum.appendChild(nm);
+    det.appendChild(sum);
+
+    const addRow = (label, text) => {
+      if (!text) return;
+      const row = document.createElement('div'); row.className = 'ref-row';
+      const l = document.createElement('div'); l.className = 'ref-row-lbl'; l.textContent = label;
+      const t = document.createElement('div'); t.className = 'ref-row-txt'; t.textContent = text;
+      row.appendChild(l); row.appendChild(t); det.appendChild(row);
+    };
+    const gl = (o) => o && o.glas ? (', глас ' + o.glas) : '';
+    if (z.tropar) appendProkBlock(det, { label: 'Тропар' + gl(z.tropar), text: z.tropar.text });
+    if (z.kondak) appendProkBlock(det, { label: 'Кондак' + gl(z.kondak), text: z.kondak.text });
+    if (z.prok || z.apostol || z.gospel || z.prychasen){
+      const sec = document.createElement('div'); sec.className = 'ref-feast-sec ref-feast-sec--lit'; sec.textContent = 'На Літургії';
+      det.appendChild(sec);
+    }
+    if (z.prok) appendProkBlock(det, { label: 'Прокимен' + gl(z.prok), text: z.prok.text, stih: z.prok.stih });
+    addRow('Апостол', z.apostol);
+    if (z.alleluia) appendProkBlock(det, { label: 'Алилуарій' + gl(z.alleluia), text: z.alleluia.text, stih: z.alleluia.stih });
+    addRow('Євангеліє', z.gospel);
+    addRow('Причасний', z.prychasen);
+
+    const close = document.createElement('div');
+    close.className = 'fold-close-plain';
+    close.innerHTML = z.chyn + foldAct('— згорнути ↑');
+    close.onclick = () => { det.open = false; };
+    det.appendChild(close);
+
+    body.appendChild(det);
+  });
+}
+function openZahalniRef(){
+  openRefPage('Загальні святим за чином', renderZahalniBody);
 }
 
 document.getElementById('soloMode').addEventListener('change',(e)=>{
