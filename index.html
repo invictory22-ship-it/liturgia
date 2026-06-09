@@ -799,7 +799,9 @@ function appendBlock(parent, block, path){
     sayBlk++;                       // номер цього мовленнєвого блоку (молитви/ектенії)
     const wrap = document.createElement('div');
     wrap.className = 'b-say';
-    if (block.role){
+    // Підпис-роль (Священник/Виголос/Диякон/Читець) — лише коли служу НЕ сам.
+    // У режимі «Служу сам» промовляю все сам → підпис зайвий, прибираємо (компактніше).
+    if (block.role && !soloMode){
       const r = document.createElement('div');
       r.className = 'role'; r.textContent = block.role;
       wrap.appendChild(r);
