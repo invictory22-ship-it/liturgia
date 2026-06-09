@@ -505,8 +505,7 @@
     <div class="drawer-group">Довідник</div>
     <a onclick="openReference()">Додаткові прохання на ектеніях</a>
     <a onclick="openYearRef()">Прокимни, величання, відпусти</a>
-    <a onclick="openGlasiRef()">Недільні тропарі й кондаки (8 гласів)</a>
-    <a onclick="openDenniRef()">Прокимни, алилуї, причасні денні</a>
+    <a onclick="openTyzhdenRef()">Тиждень — гласи й денні (Пн–Нд)</a>
     <a onclick="openZahalniRef()">Загальні святим за чином (святителю, апостолу, мученику…)</a>
     <a class="soon">Наука про відпусти</a>
     <a class="soon">Молитви перед / після Причастя</a>
@@ -590,7 +589,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=69"></script>
+<script src="liturgy-data.js?v=70"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1931,6 +1930,78 @@ function renderDenniBody(){
 }
 function openDenniRef(){
   openRefPage('Прокимни, алилуї, причасні денні (за днями тижня)', renderDenniBody);
+}
+
+// ТИЖДЕНЬ — об'єднана сторінка: Неділя (за гласом, GLASI) + Будні Пн–Сб (DENNI).
+function renderTyzhdenBody(){
+  const body = document.getElementById('refBody');
+  body.innerHTML = '';
+  const intro = document.createElement('div');
+  intro.className = 'ref-hint';
+  intro.innerHTML = 'Незмінні співи тижня: <b>Неділя</b> — за гласом (8-тижневий цикл Октоїха), <b>Пн–Сб</b> — денні. Тропар, кондак, богородичний, прокимен, алилуарій, причасний.';
+  body.appendChild(intro);
+
+  const addRow = (det, label, text) => {
+    if (!text) return;
+    const row = document.createElement('div'); row.className = 'ref-row';
+    const l = document.createElement('div'); l.className = 'ref-row-lbl'; l.textContent = label;
+    const t = document.createElement('div'); t.className = 'ref-row-txt'; t.textContent = text;
+    row.appendChild(l); row.appendChild(t); det.appendChild(row);
+  };
+  const secHead = (txt) => {
+    const h = document.createElement('div');
+    h.className = 'ref-feast-sec'; h.textContent = txt;
+    body.appendChild(h);
+  };
+  const mkDet = (title) => {
+    const det = document.createElement('details');
+    det.className = 'ref-feast';
+    det.addEventListener('toggle', updateStickyClose);
+    const sum = document.createElement('summary');
+    const nm = document.createElement('div');
+    nm.className = 'feast-name'; nm.textContent = title;
+    sum.appendChild(nm); det.appendChild(sum);
+    return det;
+  };
+  const mkClose = (det, title) => {
+    const close = document.createElement('div');
+    close.className = 'fold-close-plain';
+    close.innerHTML = title + foldAct('— згорнути ↑');
+    close.onclick = () => { det.open = false; };
+    det.appendChild(close);
+  };
+
+  // НЕДІЛЯ — за гласом
+  secHead('Неділя — за гласом (Октоїх)');
+  const GG = (typeof GLASI !== 'undefined') ? GLASI : [];
+  GG.forEach(g => {
+    const title = 'Неділя · глас ' + g.glas;
+    const det = mkDet(title);
+    addRow(det, 'Тропар', g.tropar);
+    addRow(det, 'Кондак', g.kondak);
+    addRow(det, 'Богородичний', g.bohorodychen);
+    appendProkBlock(det, { label: 'Прокимен (на Літургії)', text: g.prok, stih: g.prokStih });
+    appendProkBlock(det, { label: 'Алилуя', text: g.alleluia, stih: g.alleluiaStih });
+    addRow(det, 'Причасний', (typeof SUNDAY_PRYCHASEN !== 'undefined' ? SUNDAY_PRYCHASEN : ''));
+    mkClose(det, title);
+    body.appendChild(det);
+  });
+
+  // БУДНІ — Пн–Сб
+  secHead('Будні (Пн–Сб)');
+  const DD = (typeof DENNI !== 'undefined') ? DENNI : [];
+  DD.forEach(d => {
+    const det = mkDet(d.day);
+    addRow(det, 'Тропар', d.tropar);
+    addRow(det, 'Інший тропар', d.troparAlt);
+    addRow(det, 'Богородичний', d.bohorodychen);
+    (d.rows || []).forEach(r => appendProkBlock(det, r));
+    mkClose(det, d.day);
+    body.appendChild(det);
+  });
+}
+function openTyzhdenRef(){
+  openRefPage('Тиждень — гласи й денні', renderTyzhdenBody);
 }
 
 // Загальні святим ЗА ЧИНОМ — словник ZAHALNI. Кожен чин = акордеон.
