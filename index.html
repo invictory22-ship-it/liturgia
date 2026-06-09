@@ -418,6 +418,7 @@
   .ref-feast .feast-name::before { content: var(--ic-closed) " "; color: var(--dash-mark); }
   .ref-feast[open] .feast-name::before { content: var(--ic-open) " "; }
   .ref-feast .feast-meta { margin: 4px 0 0 18px; color: var(--feast-meta); font-size: 13px; }
+  .ref-feast .feast-rank { opacity: .65; font-style: italic; }
   /* кольори категорій свят — зі спільної палітри (:root угорі) */
   .ref-feast.cat-lord      .feast-name::before,
   .feast-legend .cat-lord      { color: var(--cat-lord); }       /* Господнє — червоний */
@@ -589,7 +590,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=77"></script>
+<script src="liturgy-data.js?v=78"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1667,12 +1668,13 @@ function renderYearBody(){
     if (f.dateLabel || f.rank){
       const meta = document.createElement('div');
       meta.className = 'feast-meta';
-      let mt = f.dateLabel || '';
+      meta.textContent = f.dateLabel || '';
       if (f.rank){
-        const r = f.rank.charAt(0).toUpperCase() + f.rank.slice(1);
-        mt = mt ? (mt + ' · ' + r) : r;
+        const rs = document.createElement('span');
+        rs.className = 'feast-rank';
+        rs.textContent = (f.dateLabel ? ' · ' : '') + f.rank.charAt(0).toUpperCase() + f.rank.slice(1);
+        meta.appendChild(rs);
       }
-      meta.textContent = mt;
       sum.appendChild(meta);
     }
     det.appendChild(sum);
