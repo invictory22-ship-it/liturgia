@@ -589,7 +589,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=70"></script>
+<script src="liturgy-data.js?v=71"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1971,12 +1971,16 @@ function renderTyzhdenBody(){
     det.appendChild(close);
   };
 
-  // НЕДІЛЯ — за гласом
-  secHead('Неділя — за гласом (Октоїх)');
+  // НЕДІЛЯ — один акордеон, усередині 8 гласів (компактно)
+  const ned = mkDet('Неділя');
+  const nh = document.createElement('div');
+  nh.className = 'ref-hint'; nh.style.margin = '4px 0 2px'; nh.textContent = 'Обери глас тижня:';
+  ned.appendChild(nh);
   const GG = (typeof GLASI !== 'undefined') ? GLASI : [];
   GG.forEach(g => {
-    const title = 'Неділя · глас ' + g.glas;
+    const title = 'Глас ' + g.glas;
     const det = mkDet(title);
+    det.style.margin = '4px 0 4px 10px';
     addRow(det, 'Тропар', g.tropar);
     addRow(det, 'Кондак', g.kondak);
     addRow(det, 'Богородичний', g.bohorodychen);
@@ -1984,16 +1988,19 @@ function renderTyzhdenBody(){
     appendProkBlock(det, { label: 'Алилуя', text: g.alleluia, stih: g.alleluiaStih });
     addRow(det, 'Причасний', (typeof SUNDAY_PRYCHASEN !== 'undefined' ? SUNDAY_PRYCHASEN : ''));
     mkClose(det, title);
-    body.appendChild(det);
+    ned.appendChild(det);
   });
+  mkClose(ned, 'Неділя');
+  body.appendChild(ned);
 
-  // БУДНІ — Пн–Сб
-  secHead('Будні (Пн–Сб)');
+  // БУДНІ — Пн–Сб (тропар, кондак, прокимен, алилуарій, причасний)
   const DD = (typeof DENNI !== 'undefined') ? DENNI : [];
   DD.forEach(d => {
     const det = mkDet(d.day);
     addRow(det, 'Тропар', d.tropar);
     addRow(det, 'Інший тропар', d.troparAlt);
+    addRow(det, 'Кондак', d.kondak);
+    addRow(det, 'Другий кондак', d.kondakAlt);
     addRow(det, 'Богородичний', d.bohorodychen);
     (d.rows || []).forEach(r => appendProkBlock(det, r));
     mkClose(det, d.day);
