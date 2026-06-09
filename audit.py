@@ -22,12 +22,20 @@ def prok_items(f, key):
     if not v: return []
     return v if isinstance(v, list) else [v]
 
+# Ранги, що МАЮТЬ свій ранній прокимен + утреннє Євангеліє (полієлей і вище).
+# Нижчі (славослів’я/шестерична/повсякденна) свого раннього прокимна не мають — це норма.
+RANK_HAS_MATINS = {'пасхальна', 'дванадесяте', 'бдіння', 'полієлей'}
+KNOWN_RANKS = RANK_HAS_MATINS | {'славослів’я', 'шестерична', 'повсякденна',
+                                 'заупокійна', 'великопостова'}
+
 no_stih = []     # A: text є, стиха нема
-no_matins = []   # B: нема раннього прокимна/Євангелія
+no_matins = []   # B: ранг вимагає раннього прокимна, а його нема
+no_rank = []     # C: немає поля rank (або невідоме значення)
 
 for f in feasts:
     name = f.get('name', '?')
     date = f.get('dateLabel', f.get('date', ''))
+    rank = f.get('rank')
     # A) перевіряємо всі прокимни/алилуарій на стих
     for key in ('prokMatins', 'prokLiturgy', 'alleluia'):
         for it in prok_items(f, key):
@@ -35,22 +43,30 @@ for f in feasts:
                 lbl = it.get('label', '')
                 no_stih.append('%s (%s) — %s%s: стих ВІДСУТНІЙ' %
                                (name, date, key, (' [%s]' % lbl) if lbl else ''))
-    # B) ранній прокимен / утреннє Євангеліє
+    # C) ранг
+    if not rank or rank not in KNOWN_RANKS:
+        no_rank.append('%s (%s) — rank=%r' % (name, date, rank))
+    # B) ранній прокимен — лише якщо ранг його вимагає
     ch = f.get('chytannia', {}) or {}
     has_mp = bool(prok_items(f, 'prokMatins'))
     has_mg = bool(ch.get('matinsGospel'))
-    if not has_mp and not has_mg:
-        no_matins.append('%s (%s)' % (name, date))
+    if rank in RANK_HAS_MATINS and not has_mp:
+        no_matins.append('%s (%s) [%s]%s' %
+                         (name, date, rank, '' if has_mg else ' — і без утр. Єв.'))
 
 print('=' * 70)
 print('A) ПРОКИМЕН/АЛИЛУАРІЙ БЕЗ СТИХА (завжди треба виправити): %d' % len(no_stih))
 print('=' * 70)
-for s in no_stih: print('  ✗ ' + s)
+for s in no_stih: print('  X ' + s)
 print()
 print('=' * 70)
-print('B) БЕЗ РАННЬОГО ПРОКИМНА/УТРЕННЬОГО ЄВАНГЕЛІЯ: %d' % len(no_matins))
-print('   (норма для нижчих рангів; для Полієлей/Бдіння — прогалина)')
+print('B) ПОЛІЄЛЕЙ/БДІННЯ БЕЗ РАННЬОГО ПРОКИМНА (прогалина): %d' % len(no_matins))
 print('=' * 70)
 for s in no_matins: print('  ? ' + s)
+print()
+print('=' * 70)
+print('C) БЕЗ ПОЛЯ rank або невідомий ранг: %d' % len(no_rank))
+print('=' * 70)
+for s in no_rank: print('  ! ' + s)
 print()
 print('РАЗОМ свят у FEASTS: %d' % len(feasts))

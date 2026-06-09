@@ -589,7 +589,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=76"></script>
+<script src="liturgy-data.js?v=77"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1661,11 +1661,16 @@ function renderYearBody(){
     const nm = document.createElement('div');
     nm.className = 'feast-name'; nm.textContent = f.name;
     sum.appendChild(nm);
-    // рядок 2 — дата
-    if (f.dateLabel){
+    // рядок 2 — дата (+ ранг свята: полієлей / бдіння / дванадесяте …)
+    if (f.dateLabel || f.rank){
       const meta = document.createElement('div');
       meta.className = 'feast-meta';
-      meta.textContent = f.dateLabel;
+      let mt = f.dateLabel || '';
+      if (f.rank){
+        const r = f.rank.charAt(0).toUpperCase() + f.rank.slice(1);
+        mt = mt ? (mt + ' · ' + r) : r;
+      }
+      meta.textContent = mt;
       sum.appendChild(meta);
     }
     det.appendChild(sum);
