@@ -454,14 +454,16 @@
     font-size: 17px; letter-spacing: 1.2px; padding: 13px 16px; border-color: #b8964a; }
   /* Антифони свята — згортний блок у картці */
   .ref-ant { border-top: 1px solid var(--feast-line); }
-  /* плашка-кнопка, щоб не зливалась */
-  .ref-ant-head { cursor: pointer; user-select: none; margin: 12px 16px; padding: 11px 14px;
-    background: var(--feast-strip); border: 1px solid var(--feast-border); border-radius: 9px;
-    color: var(--feast-name); font-size: 13px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .5px; display: flex; align-items: center; gap: 8px; }
-  .ref-ant-head::before { content: "\25b8"; color: var(--cat-great); font-size: 12px; }
-  .ref-ant.open .ref-ant-head { border-radius: 9px 9px 0 0; margin-bottom: 0; }
-  .ref-ant.open .ref-ant-head::before { content: "\25be"; }
+  /* плашка-кнопка — золота, щоб одразу впадала в око */
+  .ref-ant-head { cursor: pointer; user-select: none; margin: 14px 16px; padding: 12px 14px;
+    background: rgba(210,162,76,.14); border: 1px solid rgba(210,162,76,.5);
+    border-left: 4px solid var(--cat-great); border-radius: 8px;
+    color: #ecc77f; font-size: 13.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; display: flex; align-items: center; gap: 9px; }
+  .ref-ant-head::before { content: "\266B"; color: var(--cat-great); font-size: 15px; }
+  .ref-ant-head::after { content: "\25b8"; margin-left: auto; color: var(--cat-great); font-size: 12px; }
+  .ref-ant.open .ref-ant-head { border-radius: 8px 8px 0 0; margin-bottom: 0; }
+  .ref-ant.open .ref-ant-head::after { content: "\25be"; }
   .ref-ant-body { display: none; margin: 0 16px 12px; padding: 0 14px;
     border: 1px solid var(--feast-border); border-top: none; border-radius: 0 0 9px 9px; }
   .ref-ant.open .ref-ant-body { display: block; }
@@ -587,7 +589,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=61"></script>
+<script src="liturgy-data.js?v=62"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1740,9 +1742,9 @@ function renderYearBody(){
           gStih('Стих ' + (j + 1) + ': ' + s);
           if (prFull) gPr(j === 0 ? ('Приспів: ' + prFull) : 'Приспів той самий.');
         });
-        // кінцівка антифону: «Слава, і нині» + повтор приспіву; після Ант. 2 — «Єдинородний Сину»
-        if (i === 0 && prFull){ gStih('Слава, і нині. Амінь.'); gPr('Приспів той самий.'); }
-        if (i === 1){ gStih('Слава, і нині. Амінь.'); gPr(EDYNORODNYJ); }
+        // кінцівка антифону: «Слава: І нині:» + повтор приспіву; після Ант. 2 — «Єдинородний Сину»
+        if (i === 0 && prFull){ gStih('Слава: І нині:'); gPr('Приспів той самий.'); }
+        if (i === 1){ gStih('Слава: І нині:'); gPr(EDYNORODNYJ); }
         body.appendChild(grp);
       });
       wrap.appendChild(head); wrap.appendChild(body);
