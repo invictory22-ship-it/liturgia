@@ -454,16 +454,28 @@
     font-size: 17px; letter-spacing: 1.2px; padding: 13px 16px; border-color: #b8964a; }
   /* Антифони свята — згортний блок у картці */
   .ref-ant { border-top: 1px solid var(--feast-line); }
-  .ref-ant-head { cursor: pointer; padding: 12px 16px; color: var(--feast-lbl);
-    font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; user-select: none; }
-  .ref-ant-head::before { content: "\25b8\00a0"; color: var(--feast-meta); }
-  .ref-ant.open .ref-ant-head::before { content: "\25be\00a0"; }
-  .ref-ant-body { display: none; padding: 0 16px 12px; }
+  /* плашка-кнопка, щоб не зливалась */
+  .ref-ant-head { cursor: pointer; user-select: none; margin: 12px 16px; padding: 11px 14px;
+    background: var(--feast-strip); border: 1px solid var(--feast-border); border-radius: 9px;
+    color: var(--feast-name); font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; display: flex; align-items: center; gap: 8px; }
+  .ref-ant-head::before { content: "\25b8"; color: var(--cat-great); font-size: 12px; }
+  .ref-ant.open .ref-ant-head { border-radius: 9px 9px 0 0; margin-bottom: 0; }
+  .ref-ant.open .ref-ant-head::before { content: "\25be"; }
+  .ref-ant-body { display: none; margin: 0 16px 12px; padding: 0 14px;
+    border: 1px solid var(--feast-border); border-top: none; border-radius: 0 0 9px 9px; }
   .ref-ant.open .ref-ant-body { display: block; }
-  .ref-ant-lbl { color: var(--feast-meta); font-size: 12px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .4px; margin: 10px 0 4px; }
-  .ref-ant-stih { color: var(--feast-txt); font-size: 18px; line-height: 1.45; margin-bottom: 2px; }
-  .ref-ant-pr { color: #b0a98f; font-size: 16px; font-style: italic; margin: 3px 0 5px; }
+  /* одна група = один антифон, з роздільником зверху */
+  .ref-ant-grp { padding: 12px 0; border-top: 1px solid var(--feast-line); }
+  .ref-ant-grp:first-child { border-top: none; }
+  /* назва антифону — золотий «чип» */
+  .ref-ant-lbl { display: inline-block; color: var(--cat-great); background: rgba(210,162,76,.13);
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+    padding: 3px 11px; border-radius: 11px; margin-bottom: 9px; }
+  .ref-ant-stih { color: var(--feast-txt); font-size: 18px; line-height: 1.45; margin: 7px 0 0; }
+  /* приспів — курсив, з лівою рискою, щоб чітко відрізнявся від стиха */
+  .ref-ant-pr { color: #a89e80; font-size: 15px; font-style: italic; line-height: 1.4;
+    margin: 4px 0 0; padding-left: 12px; border-left: 2px solid var(--feast-border); }
   /* нижня липучка «згорнути» картки свята — у стилі звичайних акордеонів (.fold-close-plain) */
   .ref-feast .fold-close-plain { margin: 0; border: none; border-top: 1px solid var(--feast-border);
     border-radius: 0; color: var(--feast-meta); }
@@ -575,7 +587,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=59"></script>
+<script src="liturgy-data.js?v=60"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1716,17 +1728,22 @@ function renderYearBody(){
       head.textContent = 'Антифони свята';
       const body = document.createElement('div'); body.className = 'ref-ant-body';
       head.addEventListener('click', () => wrap.classList.toggle('open'));
-      const antStih = (txt) => { const d = document.createElement('div'); d.className = 'ref-ant-stih'; d.textContent = txt; body.appendChild(d); };
-      const antPr = (txt) => { const d = document.createElement('div'); d.className = 'ref-ant-pr'; d.textContent = txt; body.appendChild(d); };
+      const EDYNORODNYJ = 'Єдинородний Сину і Слово Боже, безсмертний єси, Ти зволив ради нашого спасіння воплотитися від Святої Богородиці і Приснодіви Марії, незмінно ставши людиною; розп’ятий же, Христе Боже, смертю смерть подолав, єдиний Ти зі Святої Тройці, прославлюваний з Отцем і Святим Духом, спаси нас.';
       f.antyfony.forEach((ant, i) => {
-        const al = document.createElement('div'); al.className = 'ref-ant-lbl';
-        al.textContent = ant.label; body.appendChild(al);
+        const grp = document.createElement('div'); grp.className = 'ref-ant-grp';
+        const gStih = (t) => { const d = document.createElement('div'); d.className = 'ref-ant-stih'; d.textContent = t; grp.appendChild(d); };
+        const gPr = (t) => { const d = document.createElement('div'); d.className = 'ref-ant-pr'; d.textContent = t; grp.appendChild(d); };
+        const al = document.createElement('div'); al.className = 'ref-ant-lbl'; al.textContent = ant.label; grp.appendChild(al);
+        // приспів Антифону 3 = тропар свята (підставляємо повний текст із f.tropar)
+        const prFull = (ant.pryspiv === 'тропар свята' && f.tropar) ? f.tropar.text : ant.pryspiv;
         (ant.stychy || []).forEach((s, j) => {
-          antStih('Стих ' + (j + 1) + ': ' + s);
-          if (ant.pryspiv) antPr(j === 0 ? ('Приспів: ' + ant.pryspiv) : 'Приспів той самий.');
+          gStih('Стих ' + (j + 1) + ': ' + s);
+          if (prFull) gPr(j === 0 ? ('Приспів: ' + prFull) : 'Приспів той самий.');
         });
-        // після Антифону 2 — «Слава і нині» та спів «Єдинородний Сину»
-        if (i === 1){ antStih('Слава, і нині. Амінь.'); antPr('Єдинородний Сину і Слово Боже…'); }
+        // кінцівка антифону: «Слава, і нині» + повтор приспіву; після Ант. 2 — «Єдинородний Сину»
+        if (i === 0 && prFull){ gStih('Слава, і нині. Амінь.'); gPr('Приспів той самий.'); }
+        if (i === 1){ gStih('Слава, і нині. Амінь.'); gPr(EDYNORODNYJ); }
+        body.appendChild(grp);
       });
       wrap.appendChild(head); wrap.appendChild(body);
       det.appendChild(wrap);
