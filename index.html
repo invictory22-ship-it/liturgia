@@ -590,7 +590,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=68"></script>
+<script src="liturgy-data.js?v=69"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1772,6 +1772,7 @@ function renderYearBody(){
       });
     } else {
       addProk('Тропар', f.tropar);
+      addProk('Інший тропар', f.troparAlt);
       addProk('Кондак', f.kondak);
     }
     // Прокимен на Літургію (масив кількох празнувань або один об'єкт)
@@ -1879,7 +1880,7 @@ function renderGlasiBody(){
     };
     addRow('Тропар', g.tropar);
     addRow('Кондак', g.kondak);
-    addRow('Богородичний (догматик)', g.bohorodychen);
+    addRow('Богородичний', g.bohorodychen);
     appendProkBlock(det, { label: 'Прокимен (на Літургії)', text: g.prok, stih: g.prokStih });
     appendProkBlock(det, { label: 'Алилуя', text: g.alleluia, stih: g.alleluiaStih });
     addRow('Причасний', (typeof SUNDAY_PRYCHASEN !== 'undefined' ? SUNDAY_PRYCHASEN : ''));
