@@ -590,13 +590,16 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=78"></script>
+<script src="liturgy-data.js?v=79"></script>
 <script>
 
 let recognition = null, isListening = false;
 let currentIndex = 0;          // index into trackedWords
 let trackedWords = [];         // [{text, normalized, el, blk}] blk = № мовленнєвого блоку
 let sayBlk = 0;                // лічильник мовленнєвих блоків (для меж підхвату)
+let prayerGapAfterBlk = new Set(); // № блоків, після яких ОДРАЗУ йде тиха молитва (prayer) —
+                               // "шлагбаум": трекер не переступає її, поки не почує наступний блок
+let lastSayBlkSeen = -1;       // службове під час render(): останній побачений мовленнєвий блок
 let sectionHeaders = [];       // [{el, text}] — заголовки розділів для індикатора "ти тут"
 let finalWordCount = 0;        // скільки ФІНАЛЬНИХ слів уже оброблено (interim ігноруємо)
 let soloMode = true;           // "Служу сам": ховає дії диякона, трекає дияконське,
@@ -743,6 +746,7 @@ function render(skipHL){
   trackedWords = [];
   sectionHeaders = [];
   sayBlk = 0;
+  prayerGapAfterBlk = new Set(); lastSayBlkSeen = -1;   // перебудовуємо «шлагбауми» з нуля
   renderingFull = true;          // дозволити трекінг обраних прохань усередині акордеонів
 
   activeBlocks.forEach((rawBlock, bi) => {
@@ -798,6 +802,7 @@ function appendBlock(parent, block, path){
     parent.appendChild(fig);
   } else if (block.t === 'say'){
     sayBlk++;                       // номер цього мовленнєвого блоку (молитви/ектенії)
+    lastSayBlkSeen = sayBlk;        // запам'ятати для «шлагбауму» (раптом далі — тиха молитва)
     const wrap = document.createElement('div');
     wrap.className = 'b-say';
     // Підпис-роль (Священник/Виголос/Диякон/Читець) — лише коли служу НЕ сам.
@@ -842,6 +847,8 @@ function appendBlock(parent, block, path){
     wrap.appendChild(txt);
     parent.appendChild(wrap);
   } else if (block.t === 'prayer'){
+    // тиха молитва одразу після мовленнєвого блоку → ставимо «шлагбаум» на тому блоці
+    if (lastSayBlkSeen >= 0) prayerGapAfterBlk.add(lastSayBlkSeen);
     const wrap = document.createElement('div');
     wrap.className = 'b-prayer';
     if (block.label){
@@ -1212,6 +1219,7 @@ const MOVE_MIN_SCORE = 2.0;   // мінімум "очок" (~3 слова пос
 const RIVAL_RATIO = 0.8;      // якщо інше місце має >=80% очок лідера — неоднозначно, стоїмо
 const ALIGN_BACK = 2;         // трохи назад (якщо трекер забіг уперед)
 const ALIGN_FWD_MAX = 50;     // запобіжник на ширину пошуку (стіна блоку зазвичай вужча)
+const RELEASE_LOOKAHEAD = 3;  // скільки перших слів НАСТУПНОГО блоку слухаємо, щоб зняти шлагбаум
 
 function wordScore(h, t){
   if(!h || !t) return 0;
@@ -1239,12 +1247,37 @@ function syncPosition(){
   if(!probe.length) return;
   const newest = probe[probe.length-1];
 
+  // Межа поточного мовленнєвого блоку (молитви/ектенії).
+  const curBlk = tw[currentIndex].blk;
+  let blockEnd = currentIndex + 1;
+  while(blockEnd < tw.length && tw[blockEnd].blk === curBlk) blockEnd++;
+  // ШЛАГБАУМ: одразу після цього блоку йде ТИХА молитва (prayer), яку отець читає про себе.
+  // Тоді трекер НЕ переступає її автоматично — паркується на останньому слові блоку
+  // (помаранчевий лишається там), поки чітко не почує ПОЧАТОК наступного блоку (release нижче).
+  const gapHere = prayerGapAfterBlk.has(curBlk);
+
+  // ── RELEASE крізь шлагбаум: знімаємо стоп ЛИШЕ коли ясно почули початок наступного блоку
+  //    (а не від мурмотіння тихої молитви). Тоді стрибаємо саме туди.
+  if(gapHere && newest && blockEnd < tw.length){
+    for(let j=0; j<RELEASE_LOOKAHEAD && blockEnd+j<tw.length; j++){
+      const cand = tw[blockEnd+j];
+      if(cand.normalized.length >= 4 && wordMatches(newest, cand.normalized)){
+        currentIndex = blockEnd + j + 1; return;
+      }
+    }
+  }
+
   // ── ШВИДКИЙ ШЛЯХ (звичайне читання) — миттєвий крок, без порогу й контексту.
   //    Це лікує застрягання на останньому слові молитви та на коротких блоках.
   if(newest){
     // почуте = ПОТОЧНЕ слово → крок на 1 (навіть коротке: лише точний збіг його не зрушить дарма)
-    if(wordMatches(newest, tw[currentIndex].normalized)){ currentIndex++; return; }
-    if(currentIndex+1 < tw.length){
+    if(wordMatches(newest, tw[currentIndex].normalized)){
+      // у блоці зі шлагбаумом не переступаємо останнє слово — стоїмо на ньому (читаємо тиху молитву)
+      if(!(gapHere && currentIndex >= blockEnd-1)) currentIndex++;
+      return;
+    }
+    // стрибки на +2 не дозволяємо через шлагбаум (це вже наступний блок за тихою молитвою)
+    if(currentIndex+1 < tw.length && !(gapHere && currentIndex+1 >= blockEnd)){
       // склейка "на віки"->"навіки"
       if(newest === tw[currentIndex].normalized + tw[currentIndex+1].normalized){ currentIndex += 2; return; }
       // пропущене одне слово: почуте = НАСТУПНЕ (лише довге, щоб не плутати короткі) → крок на 2
@@ -1256,11 +1289,9 @@ function syncPosition(){
   //    і "стоянням при неоднозначності". Лише в межах блоку + місток.
   // СТІНА + МІСТОК: верхня межа пошуку = кінець поточної молитви; якщо ми вже
   // близько до кінця — дозволяємо зазирнути на початок наступної молитви.
-  const curBlk = tw[currentIndex].blk;
-  let blockEnd = currentIndex + 1;
-  while(blockEnd < tw.length && tw[blockEnd].blk === curBlk) blockEnd++;
+  // Через шлагбаум місток НЕ наводимо (стіна = кінець блоку з тихою молитвою).
   let wall = blockEnd;
-  if(blockEnd - currentIndex <= BRIDGE_TAIL && blockEnd < tw.length){
+  if(!gapHere && blockEnd - currentIndex <= BRIDGE_TAIL && blockEnd < tw.length){
     const nextBlk = tw[blockEnd].blk;
     while(wall < tw.length && tw[wall].blk === nextBlk) wall++;
   }
@@ -1287,6 +1318,7 @@ function syncPosition(){
   // Рухаємось лише ВПЕРЕД, з достатньою впевненістю і без рівного суперника.
   if(bestI > currentIndex && bestS >= MOVE_MIN_SCORE && rival < bestS * RIVAL_RATIO){
     currentIndex = bestI + 1;
+    if(gapHere && currentIndex >= blockEnd) currentIndex = blockEnd - 1;  // не переступати шлагбаум
   }
 }
 
