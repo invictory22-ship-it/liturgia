@@ -558,7 +558,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=52"></script>
+<script src="liturgy-data.js?v=53"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1718,8 +1718,11 @@ function renderYearBody(){
     if (f.zadostiynyk){
       const row = document.createElement('div'); row.className = 'ref-row';
       const l = document.createElement('div'); l.className = 'ref-row-lbl'; l.textContent = 'Задостойник';
-      const t = document.createElement('div'); t.className = 'ref-row-txt'; t.textContent = f.zadostiynyk.pryspiv || '';
-      row.appendChild(l); row.appendChild(t);
+      row.appendChild(l);
+      if (f.zadostiynyk.pryspiv){
+        const t = document.createElement('div'); t.className = 'ref-row-txt'; t.textContent = f.zadostiynyk.pryspiv;
+        row.appendChild(t);
+      }
       if (f.zadostiynyk.irmos){
         const ir = document.createElement('div'); ir.className = 'ref-stih'; ir.textContent = f.zadostiynyk.irmos;
         row.appendChild(ir);
