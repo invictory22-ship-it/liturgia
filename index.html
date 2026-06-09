@@ -575,7 +575,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=58"></script>
+<script src="liturgy-data.js?v=59"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1716,17 +1716,17 @@ function renderYearBody(){
       head.textContent = 'Антифони свята';
       const body = document.createElement('div'); body.className = 'ref-ant-body';
       head.addEventListener('click', () => wrap.classList.toggle('open'));
-      f.antyfony.forEach(ant => {
+      const antStih = (txt) => { const d = document.createElement('div'); d.className = 'ref-ant-stih'; d.textContent = txt; body.appendChild(d); };
+      const antPr = (txt) => { const d = document.createElement('div'); d.className = 'ref-ant-pr'; d.textContent = txt; body.appendChild(d); };
+      f.antyfony.forEach((ant, i) => {
         const al = document.createElement('div'); al.className = 'ref-ant-lbl';
         al.textContent = ant.label; body.appendChild(al);
-        (ant.stychy || []).forEach(s => {
-          const sl = document.createElement('div'); sl.className = 'ref-ant-stih';
-          sl.textContent = s; body.appendChild(sl);
+        (ant.stychy || []).forEach((s, j) => {
+          antStih('Стих ' + (j + 1) + ': ' + s);
+          if (ant.pryspiv) antPr(j === 0 ? ('Приспів: ' + ant.pryspiv) : 'Приспів той самий.');
         });
-        if (ant.pryspiv){
-          const pr = document.createElement('div'); pr.className = 'ref-ant-pr';
-          pr.textContent = 'Приспів: ' + ant.pryspiv; body.appendChild(pr);
-        }
+        // після Антифону 2 — «Слава і нині» та спів «Єдинородний Сину»
+        if (i === 1){ antStih('Слава, і нині. Амінь.'); antPr('Єдинородний Сину і Слово Боже…'); }
       });
       wrap.appendChild(head); wrap.appendChild(body);
       det.appendChild(wrap);
