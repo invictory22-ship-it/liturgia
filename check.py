@@ -41,6 +41,15 @@ try:
                 errors.append('liturgy-data.js: глас #%d без glas' % i)
                 break
 
+    # --- DENNI (необов'язковий: денні прокимни/алилуарії/причасні за днями тижня) ---
+    md = re.search(r'const DENNI = (\[[\s\S]*?\n\]);', txt)
+    if md:
+        denni = json.loads(md.group(1))
+        for i, d in enumerate(denni):
+            if 'day' not in d or 'rows' not in d:
+                errors.append('liturgy-data.js: денний #%d без day/rows' % i)
+                break
+
     # --- PASKY та інші служби (масиви блоків, як BLOCKS) ---
     for name in ('PASKY', 'PASKHA_LITURGY'):
         ms = re.search(r'const %s = (\[[\s\S]*?\n\]);' % name, txt)

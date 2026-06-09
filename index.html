@@ -444,6 +444,9 @@
   .ref-row-txt { color: var(--feast-txt); font-size: 18px; line-height: 1.5; }
   /* стих — у ТОМУ Ж блоці, що й прокимен (без роздільної риски), лиш дрібніший курсив */
   .ref-stih { color: #9a9a9a; font-size: 16px; font-style: italic; line-height: 1.5; margin-top: 7px; }
+  /* розділ-секція картки свята (Вечірня / Утреня / Літургія) у богослужбовому порядку */
+  .ref-feast-sec { color: var(--feast-meta); font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; text-align: center; padding: 13px 16px 5px; }
   /* нижня липучка «згорнути» картки свята — у стилі звичайних акордеонів (.fold-close-plain) */
   .ref-feast .fold-close-plain { margin: 0; border: none; border-top: 1px solid var(--feast-border);
     border-radius: 0; color: var(--feast-meta); }
@@ -472,6 +475,7 @@
     <a onclick="openReference()">Додаткові прохання на ектеніях</a>
     <a onclick="openYearRef()">Прокимни, величання, відпусти</a>
     <a onclick="openGlasiRef()">Недільні тропарі й кондаки (8 гласів)</a>
+    <a onclick="openDenniRef()">Прокимни, алилуї, причасні денні</a>
     <a class="soon">Наука про відпусти</a>
     <a class="soon">Молитви перед / після Причастя</a>
 
@@ -554,7 +558,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=34"></script>
+<script src="liturgy-data.js?v=49"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1453,6 +1457,11 @@ function buildFoldInner(det, foldBlock){
       });
     } else {
       for (const cb of g.prayers){
+        // акордеони з showRoles (прокимен) — хор/читець малюємо РІДНИМ рендером із підписом ролі
+        if (foldBlock.showRoles && cb.t === 'choir'){
+          appendBlock(det, cb, '');
+          continue;
+        }
         const c = document.createElement('div');
         c.className = 'b-stage';
         if (cb.cat){
@@ -1660,9 +1669,30 @@ function renderYearBody(){
       det.appendChild(row);
     };
 
-    // Кілька празнувань в один день (напр. Обрізання + Василій + Петро Могила):
-    // масив f.hymns = [{ label, tropar:{glas,text}, kondak:{glas,text} }, …].
-    // Інакше — один тропар/кондак свята (f.tropar/f.kondak).
+    // Блоки картки — у БОГОСЛУЖБОВОМУ порядку: Вечірня → Утреня (Рання) → Літургія.
+    const addSec = (text) => {
+      const h = document.createElement('div');
+      h.className = 'ref-feast-sec'; h.textContent = text;
+      det.appendChild(h);
+    };
+
+    // ── На вечірній ──
+    if (f.prokVespers){
+      addSec('На вечірній');
+      addProk('Прокимен великий', f.prokVespers);
+    }
+    // ── На ранній (утрені) ── величання (полієлей) → прокимен → ранкове Євангеліє
+    if (f.velychannia || f.prokMatins || (f.chytannia && f.chytannia.matinsGospel)){
+      addSec('На ранній (утрені)');
+      addRow('Величання', f.velychannia);
+      addProk('Прокимен', f.prokMatins);
+      if (f.chytannia && f.chytannia.matinsGospel) addRow('Євангеліє', f.chytannia.matinsGospel);
+    }
+    // ── На Літургії ── (за порядком служби: вхідне → тропар/кондак → прокимен → алилуарій →
+    //    задостойник → причасний → відпуст)
+    addSec('На Літургії');
+    addRow('Вхідне', f.vhidne);
+    // Тропар/кондак: кілька празнувань (f.hymns=[{label,tropar,kondak}]) або одне свято
     if (Array.isArray(f.hymns)){
       f.hymns.forEach(h => {
         addProk('Тропар — ' + h.label, h.tropar);
@@ -1672,15 +1702,31 @@ function renderYearBody(){
       addProk('Тропар', f.tropar);
       addProk('Кондак', f.kondak);
     }
-    addRow('Величання', f.velychannia);
-    addProk('Прокимен на ранній', f.prokMatins);
-    addProk('Прокимен великий на вечірній', f.prokVespers);
-    // Прокимен(и) на Літургію — масив {label?,glas,text} (кілька празнувань) або один об'єкт
+    // Прокимен на Літургію (масив кількох празнувань або один об'єкт)
     if (Array.isArray(f.prokLiturgy))
-      f.prokLiturgy.forEach(p => addProk('Прокимен на Літургію' + (p.label ? ' — ' + p.label : ''), p));
-    else addProk('Прокимен на Літургію', f.prokLiturgy);
-    addRow('Вхідне', f.vhidne);
-    // Причасний(і) — масив {label?,text} або один рядок
+      f.prokLiturgy.forEach(p => addProk('Прокимен' + (p.label ? ' — ' + p.label : ''), p));
+    else addProk('Прокимен', f.prokLiturgy);
+    // Апостол (зачало) — між прокимном і алилуарієм
+    if (f.chytannia && f.chytannia.apostol) addRow('Апостол', f.chytannia.apostol);
+    // Алилуарій (після Апостола, перед Євангелієм)
+    if (Array.isArray(f.alleluia))
+      f.alleluia.forEach(a => addProk('Алилуарій' + (a.label ? ' — ' + a.label : ''), a));
+    else addProk('Алилуарій', f.alleluia);
+    // Євангеліє (зачало) — після алилуарія
+    if (f.chytannia && f.chytannia.gospel) addRow('Євангеліє', f.chytannia.gospel);
+    // Задостойник — приспів + ірмос одним блоком (приспів зверху, ірмос під ним, як прокимен зі стихом)
+    if (f.zadostiynyk){
+      const row = document.createElement('div'); row.className = 'ref-row';
+      const l = document.createElement('div'); l.className = 'ref-row-lbl'; l.textContent = 'Задостойник';
+      const t = document.createElement('div'); t.className = 'ref-row-txt'; t.textContent = f.zadostiynyk.pryspiv || '';
+      row.appendChild(l); row.appendChild(t);
+      if (f.zadostiynyk.irmos){
+        const ir = document.createElement('div'); ir.className = 'ref-stih'; ir.textContent = f.zadostiynyk.irmos;
+        row.appendChild(ir);
+      }
+      det.appendChild(row);
+    }
+    // Причасний (масив або рядок)
     if (Array.isArray(f.prychasen))
       f.prychasen.forEach(p => addRow('Причасний' + (p.label ? ' — ' + p.label : ''), p.text));
     else if (f.prychasen) addRow('Причасний', f.prychasen.text || f.prychasen);
@@ -1703,13 +1749,34 @@ function openYearRef(){
 }
 
 // Довідник: НЕДІЛЬНІ ТРОПАРІ Й КОНДАКИ — 8 гласів (Октоїх). Окрема картка-секція.
+// Прокимен/алилуя/причасний + стих(и) — ОДНИМ блоком (стих усередині, без роздільної риски).
+// row: {label, text, stih?} — stih рядок або масив рядків. Спільне для гласів і денних.
+function appendProkBlock(det, row){
+  if (!row || !row.text) return;
+  const r = document.createElement('div');
+  r.className = 'ref-row';
+  const l = document.createElement('div');
+  l.className = 'ref-row-lbl'; l.textContent = row.label || '';
+  const t = document.createElement('div');
+  t.className = 'ref-row-txt'; t.textContent = row.text;
+  r.appendChild(l); r.appendChild(t);
+  const stihs = Array.isArray(row.stih) ? row.stih : (row.stih ? [row.stih] : []);
+  stihs.forEach(s => {
+    if (!s) return;
+    const sd = document.createElement('div');
+    sd.className = 'ref-stih'; sd.textContent = 'Стих: ' + s;
+    r.appendChild(sd);
+  });
+  det.appendChild(r);
+}
+
 // Дані — зі словника GLASI. Кожен глас = акордеон з рядками «Тропар»/«Кондак».
 function renderGlasiBody(){
   const body = document.getElementById('refBody');
   body.innerHTML = '';
   const intro = document.createElement('div');
   intro.className = 'ref-hint';
-  intro.innerHTML = 'Воскресні тропар і кондак на кожен із 8 гласів (тижневий цикл Октоїха).';
+  intro.innerHTML = 'Воскресні тропар, кондак, прокимен, алилуарій і причасний (на Літургії) на кожен із 8 гласів — тижневий цикл Октоїха.';
   body.appendChild(intro);
 
   const GG = (typeof GLASI !== 'undefined') ? GLASI : [];
@@ -1736,6 +1803,9 @@ function renderGlasiBody(){
     };
     addRow('Тропар', g.tropar);
     addRow('Кондак', g.kondak);
+    appendProkBlock(det, { label: 'Прокимен (на Літургії)', text: g.prok, stih: g.prokStih });
+    appendProkBlock(det, { label: 'Алилуя', text: g.alleluia, stih: g.alleluiaStih });
+    addRow('Причасний', (typeof SUNDAY_PRYCHASEN !== 'undefined' ? SUNDAY_PRYCHASEN : ''));
 
     const close = document.createElement('div');
     close.className = 'fold-close-plain';
@@ -1748,6 +1818,41 @@ function renderGlasiBody(){
 }
 function openGlasiRef(){
   openRefPage('Недільні тропарі й кондаки (8 гласів)', renderGlasiBody);
+}
+
+// Денні прокимни/алилуарії/причасні (за днями тижня) — словник DENNI.
+function renderDenniBody(){
+  const body = document.getElementById('refBody');
+  body.innerHTML = '';
+  const intro = document.createElement('div');
+  intro.className = 'ref-hint';
+  intro.innerHTML = 'Прокимни, алилуарії та причасні на кожен день буднього тижня. Неділя — за гласом (картка «8 гласів»).';
+  body.appendChild(intro);
+
+  const DD = (typeof DENNI !== 'undefined') ? DENNI : [];
+  DD.forEach(d => {
+    const det = document.createElement('details');
+    det.className = 'ref-feast';
+    det.addEventListener('toggle', updateStickyClose);
+    const sum = document.createElement('summary');
+    const nm = document.createElement('div');
+    nm.className = 'feast-name'; nm.textContent = d.day;
+    sum.appendChild(nm);
+    det.appendChild(sum);
+
+    (d.rows || []).forEach(r => appendProkBlock(det, r));
+
+    const close = document.createElement('div');
+    close.className = 'fold-close-plain';
+    close.innerHTML = d.day + foldAct('— згорнути ↑');
+    close.onclick = () => { det.open = false; };
+    det.appendChild(close);
+
+    body.appendChild(det);
+  });
+}
+function openDenniRef(){
+  openRefPage('Прокимни, алилуї, причасні денні (за днями тижня)', renderDenniBody);
 }
 
 document.getElementById('soloMode').addEventListener('change',(e)=>{
