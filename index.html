@@ -587,7 +587,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=60"></script>
+<script src="liturgy-data.js?v=61"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1791,6 +1791,7 @@ function renderYearBody(){
       f.prychasen.forEach(p => addRow('Причасний' + (p.label ? ' — ' + p.label : ''), p.text));
     else if (f.prychasen) addRow('Причасний', f.prychasen.text || f.prychasen);
     addRow('Відпуст', f.vidpust);
+    addRow('Відпуст вечірні (коліноприклонної)', f.vidpustVespers);
     // Молитва (напр. свт. Петру Могилі) — окремий рядок
     if (f.prayer) addRow(f.prayer.label || 'Молитва', f.prayer.text);
 
