@@ -589,7 +589,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=71"></script>
+<script src="liturgy-data.js?v=72"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -2001,7 +2001,8 @@ function renderTyzhdenBody(){
     addRow(det, 'Інший тропар', d.troparAlt);
     addRow(det, 'Кондак', d.kondak);
     addRow(det, 'Другий кондак', d.kondakAlt);
-    addRow(det, 'Богородичний', d.bohorodychen);
+    // богородичний буднів НЕ показуємо у шпаргалці (у молитовнику його тут нема);
+    // текст лишається в даних DENNI — для майбутньої повної Вечірні/Ранньої (рушій M).
     (d.rows || []).forEach(r => appendProkBlock(det, r));
     mkClose(det, d.day);
     body.appendChild(det);
