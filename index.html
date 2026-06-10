@@ -1276,8 +1276,8 @@ function syncPosition(){
       if(!(gapHere && currentIndex >= blockEnd-1)) currentIndex++;
       return;
     }
-    // стрибки на +2 не дозволяємо через шлагбаум (це вже наступний блок за тихою молитвою)
-    if(currentIndex+1 < tw.length && !(gapHere && currentIndex+1 >= blockEnd)){
+    // стрибки на +2 не дозволяємо переступати шлагбаум (це вже наступний блок за тихою молитвою)
+    if(currentIndex+1 < tw.length && !(gapHere && currentIndex+2 >= blockEnd)){
       // склейка "на віки"->"навіки"
       if(newest === tw[currentIndex].normalized + tw[currentIndex+1].normalized){ currentIndex += 2; return; }
       // пропущене одне слово: почуте = НАСТУПНЕ (лише довге, щоб не плутати короткі) → крок на 2
