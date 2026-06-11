@@ -518,12 +518,12 @@
     border: 1px solid transparent; color: var(--feast-txt); font-size: 14.5px; cursor: pointer; }
   .cal-day.sun { color: var(--feast-name); }
   .cal-day.muted { color: #4a4438; }
+  .cal-day.fast { background: rgba(125, 95, 180, .14); }  /* пости — фіолетова підкладка */
   .cal-day.today { border-color: var(--gold-border-soft); border-style: dashed; }
   .cal-day.sel { background: linear-gradient(180deg, var(--gold-strip-1), var(--gold-strip-2));
     border: 1px solid var(--gold-border-soft); color: var(--gold-text); font-weight: 600; }
-  .cal-day.fast { background: rgba(125, 95, 180, .14); }  /* пости — фіолетова підкладка */
-  .cal-tri { position: absolute; left: 50%; transform: translateX(-50%); bottom: 0;
-    font-size: 10px; line-height: 1; }
+  .cal-tri { position: absolute; left: 50%; transform: translateX(-50%); bottom: 3px;
+    font-size: 12px; line-height: 1; }
   .cal-tri.cat-lord      { color: var(--cat-lord); }
   .cal-tri.cat-theotokos { color: var(--cat-theotokos); }
   .cal-tri.cat-great     { color: var(--cat-great); }
@@ -2343,7 +2343,9 @@ function drawCal(){
     c.className = 'cal-dow' + (i === 6 ? ' sun' : ''); c.textContent = d;
     grid.appendChild(c);
   });
-  const firstDow = (new Date(Date.UTC(calY, calM, 1)).getUTCDay() + 6) % 7; // 0=Пн
+  let firstDow = (new Date(Date.UTC(calY, calM, 1)).getUTCDay() + 6) % 7; // 0=Пн
+  if (firstDow === 0) firstDow = 7;  // місяць з понеділка → тиждень попереднього зверху,
+                                     // щоб два порожні тижні не висіли знизу (сітка завжди 6)
   const daysIn = new Date(Date.UTC(calY, calM + 1, 0)).getUTCDate();
   const prevDays = new Date(Date.UTC(calY, calM, 0)).getUTCDate();
   const dots = feastDots(calY, calM);
@@ -2359,8 +2361,9 @@ function drawCal(){
     const c = document.createElement('div');
     c.className = 'cal-day' + (monthOff !== 0 ? ' muted' : '') + (col === 6 ? ' sun' : '');
     c.textContent = num;
+    // постова підкладка — і на приглушених днях сусідніх місяців (піст безперервний)
+    if (isFastDay(y, mIdx, num)) c.classList.add('fast');
     if (monthOff === 0){
-      if (isFastDay(y, mIdx, num)) c.classList.add('fast');
       if (iso === sohodniISO) c.classList.add('sel');
       if (iso === tISO) c.classList.add('today');
       const tp = dots[num];
