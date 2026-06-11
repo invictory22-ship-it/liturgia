@@ -502,8 +502,8 @@
   .cal-ico { color: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: 8px;
     padding: 6px 9px 4px; cursor: pointer; background: none; line-height: 1; }
   .cal-ico.on { color: var(--gold-text); background: var(--gold-strip-1); }
-  .cal-today2 { color: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: 8px;
-    padding: 6px 11px; font-size: 12.5px; cursor: pointer; background: none; }
+  .cal-today2 { color: var(--gold-dim); border: 1px dashed var(--gold-border-soft); border-radius: 8px;
+    padding: 6px 11px; font-size: 12.5px; cursor: pointer; background: none; }  /* пунктир = асоціація з «сьогодні» */
   .cal-today2:active { background: var(--gold-strip-1); }
   .cal-search { width: 100%; box-sizing: border-box; padding: 9px 13px; margin: 2px 0 6px;
     background: var(--feast-bg); border: 1px solid var(--feast-border); border-radius: 10px;
@@ -529,8 +529,9 @@
     padding: 7px 11px; margin: 8px 0; }
   .vkaz-read-lbl { color: var(--feast-meta); font-size: 11.5px; text-transform: uppercase;
     letter-spacing: .04em; margin-bottom: 3px; }
-  .vkaz-read .r { color: #84b3ec; font-size: 14px; line-height: 1.55; }
-  .vkaz-read .r .gospel { display: block; padding-left: 1.7em; }  /* Євангеліє з відступом під Апостолом */
+  .vkaz-read .r { color: #84b3ec; font-size: 14px; line-height: 1.55; margin-bottom: 4px; }
+  .vkaz-read .rpfx { display: block; }                       /* підпис «Літ. –» окремим рядком */
+  .vkaz-read .rline { display: block; padding-left: 1.1em; } /* апостол / євангеліє — рівно під ним */
   .vkaz-notes { font-style: italic; color: var(--feast-meta); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
   .vkaz-banner { background: rgba(125,95,180,.14); border-radius: 8px; padding: 8px 11px;
     color: var(--feast-name); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
@@ -2243,11 +2244,8 @@ function renderSohodniBody(){
   const [y, m] = sohodniISO.split('-').map(Number);
   calY = y; calM = m - 1;
 
-  const cal = document.createElement('div');
-  cal.id = 'sohodniCal';
-  body.appendChild(cal);
-
-  // поле пошуку — окремий рядок під верхньою панеллю, сховане; розгортає іконка-лупа
+  // поле пошуку — НАД календарем (щоб клавіатура знизу не перекривала результати),
+  // сховане; розгортає іконка-лупа з верхньої панелі
   const swrap = document.createElement('div');
   swrap.id = 'calSearchRow'; swrap.style.display = 'none';
   const inp = document.createElement('input');
@@ -2285,6 +2283,10 @@ function renderSohodniBody(){
   };
   swrap.appendChild(inp); swrap.appendChild(sres);
   body.appendChild(swrap);
+
+  const cal = document.createElement('div');
+  cal.id = 'sohodniCal';
+  body.appendChild(cal);
 
   // липка плашка дня (заповнює buildSohodni) + контент дня
   const plashka = document.createElement('div'); plashka.id = 'dayPlashka'; plashka.className = 'day-plashka';
@@ -2524,7 +2526,7 @@ function vkazRec(iso){
 // «N-а неділя після П'ятидесятниці». Antipascha (7 днів від Пасхи) = 2-а після Пасхи.
 function sundayLabel(info, dow){
   if (dow !== 0) return null;
-  if (info.days >= 7 && info.days <= 42)
+  if (info.days >= 7 && info.days <= 49)   // 7..49 → 2-а … 8-а (Пятидесятниця = 8-а)
     return (info.days / 7 + 1) + '-а неділя після Пасхи';
   if (info.days > 49)
     return Math.round((info.days - 49) / 7) + '-а неділя після П’ятидесятниці';
@@ -2622,8 +2624,13 @@ function buildSohodni(){
       rl.textContent = 'Зачала (читання)'; rb.appendChild(rl);
       vrec.readings.forEach(r => {
         const rr = document.createElement('div'); rr.className = 'r';
-        // Євангеліє — з нового рядка і з відступом ПІД Апостолом (рядок «Літ. – Апостол. Єв.»)
-        rr.innerHTML = vkazEsc(r).replace(/\.\s+((?:Мф|Мк|Лк|Ін)\.,\s[\s\S]*)$/, '.<span class="gospel">$1</span>');
+        // підпис («Літ. –» / «Ран. –» / «Свв.:») окремим рядком, апостол і Євангеліє — нижче рівно
+        const mp = r.match(/^(.*?[–:]\s)([\s\S]*)$/);
+        if (mp){
+          const parts = mp[2].replace(/\.\s+((?:Мф|Мк|Лк|Ін)\.,)/, '.$1').split('');
+          rr.innerHTML = '<span class="rpfx">' + vkazEsc(mp[1].trim()) + '</span>' +
+            parts.map(p => '<span class="rline">' + vkazEsc(p.trim()) + '</span>').join('');
+        } else rr.textContent = r;
         rb.appendChild(rr);
       });
       vd.appendChild(rb);
