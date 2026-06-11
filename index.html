@@ -515,9 +515,13 @@
   .cal-day.today { border-color: var(--gold-border-soft); border-style: dashed; }
   .cal-day.sel { background: linear-gradient(180deg, var(--gold-strip-1), var(--gold-strip-2));
     border: 1px solid var(--gold-border-soft); color: var(--gold-text); font-weight: 600; }
-  .cal-dot { position: absolute; left: 50%; transform: translateX(-50%); bottom: 4px;
-    width: 5px; height: 5px; border-radius: 50%; background: var(--cat-great); }
-  .cal-dot.red { background: var(--cat-lord); }
+  .cal-day.fast { background: rgba(125, 95, 180, .14); }  /* пости — фіолетова підкладка */
+  .cal-tri { position: absolute; left: 50%; transform: translateX(-50%); bottom: 0;
+    font-size: 10px; line-height: 1; }
+  .cal-tri.cat-lord      { color: var(--cat-lord); }
+  .cal-tri.cat-theotokos { color: var(--cat-theotokos); }
+  .cal-tri.cat-great     { color: var(--cat-great); }
+  .cal-tri.cat-saint     { color: var(--cat-saint); }
 </style>
 </head>
 <body>
@@ -2254,22 +2258,44 @@ function renderSohodniBody(){
   buildSohodni();
 }
 
-// Крапки місяця: день → 'red' (дванадесяте / Пасха з сателітами) | 'gold' (є картка)
+// Позначки місяця: день → тип свята (трикутник у колір типу, як у довіднику:
+// Господнє червоний / Богородичне блакитний / велике золотий / святого зелений).
+// Кілька свят на день → старший тип.
+const CAT_RANKD = { lord: 4, theotokos: 3, great: 2, saint: 1 };
 function feastDots(y, mIdx){
   const map = {};
+  const put = (d, tp) => {
+    tp = tp || 'saint';
+    if (!map[d] || CAT_RANKD[tp] > CAT_RANKD[map[d]]) map[d] = tp;
+  };
   const FF = (typeof FEASTS !== 'undefined') ? FEASTS : [];
   FF.forEach(f => {
     if (!f.date) return;
     const [fm, fd] = f.date.split('-').map(Number);
-    if (fm !== mIdx + 1) return;
-    map[fd] = (f.rank === 'дванадесяте' || map[fd] === 'red') ? 'red' : (map[fd] || 'gold');
+    if (fm === mIdx + 1) put(fd, f.type);
   });
   const pas = paschaDate(y);
-  [-7, 0, 39, 49].forEach(off => {
+  [-7, 0, 39, 49].forEach(off => {     // Вхід, Пасха, Вознесіння, Трійця — Господські
     const d = new Date(pas); d.setUTCDate(d.getUTCDate() + off);
-    if (d.getUTCFullYear() === y && d.getUTCMonth() === mIdx) map[d.getUTCDate()] = 'red';
+    if (d.getUTCFullYear() === y && d.getUTCMonth() === mIdx) put(d.getUTCDate(), 'lord');
   });
   return map;
+}
+
+// Багатоденні пости + строгі одноденні (фіолетова підкладка). Середи/п'ятниці
+// не позначаємо — зарябить. Великий піст рахується від Пасхи (48 днів зі Страсним),
+// Петрів — з понеділка після Всіх святих до 28.06; Успенський 1–14.08;
+// Різдвяний 15.11–24.12; одноденні: 5.01 (Навечір'я Богоявлення), 29.08
+// (Усікновення), 14.09 (Воздвиження).
+function isFastDay(y, mIdx, d){
+  const m = mIdx + 1;
+  if (m === 8 && d <= 14) return true;
+  if ((m === 11 && d >= 15) || (m === 12 && d <= 24)) return true;
+  if ((m === 1 && d === 5) || (m === 8 && d === 29) || (m === 9 && d === 14)) return true;
+  const toCur = Math.round((new Date(Date.UTC(y, mIdx, d)) - paschaDate(y)) / 86400000);
+  if (toCur >= -48 && toCur <= -1) return true;
+  if (toCur >= 57 && (m === 5 || (m === 6 && d <= 28))) return true;
+  return false;
 }
 
 function calShift(delta){ calM += delta; if (calM < 0){ calM = 11; calY--; } if (calM > 11){ calM = 0; calY++; } drawCal(); }
@@ -2304,13 +2330,15 @@ function drawCal(){
     c.className = 'cal-day' + (monthOff !== 0 ? ' muted' : '') + (col === 6 ? ' sun' : '');
     c.textContent = num;
     if (monthOff === 0){
+      if (isFastDay(y, mIdx, num)) c.classList.add('fast');
       if (iso === sohodniISO) c.classList.add('sel');
       if (iso === tISO) c.classList.add('today');
-      const dt = dots[num];
-      if (dt){
-        const dot = document.createElement('span');
-        dot.className = 'cal-dot' + (dt === 'red' ? ' red' : '');
-        c.appendChild(dot);
+      const tp = dots[num];
+      if (tp){
+        const tri = document.createElement('span');
+        tri.className = 'cal-tri cat-' + tp;
+        tri.textContent = '▸';
+        c.appendChild(tri);
       }
     }
     c.onclick = () => {
