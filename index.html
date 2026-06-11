@@ -523,7 +523,8 @@
   .day-plashka .d1 { color: var(--gold-text); font-weight: 600; font-size: 14.5px; }
   .day-plashka .d2 { color: var(--gold-dim); font-size: 12.5px; margin-top: 2px; }
   /* Богослужбові вказівки дня */
-  .vkaz-title { font-weight: 600; color: var(--feast-name); font-size: 15px; line-height: 1.5; margin: 4px 0 2px; }
+  .vkaz-body { padding: 4px 13px 2px; }   /* бічні відступи тексту вказівок від рамки */
+  .vkaz-title { font-weight: 600; color: var(--feast-name); font-size: 15px; line-height: 1.55; margin: 4px 0 2px; }
   .vkaz-read { border: 1px solid rgba(90,130,190,.38); border-radius: 8px;
     padding: 7px 11px; margin: 8px 0; }
   .vkaz-read-lbl { color: var(--feast-meta); font-size: 11.5px; text-transform: uppercase;
@@ -2539,11 +2540,13 @@ function vkazRec(iso){
 const TITLE_ABBR = ['прп','прпп','мч','мчч','мц','мцц','свт','свтт','сщмч','сщмчч','прмч',
   'прмчч','прмц','прмцц','ап','апп','вмч','вмц','блж','блгв','прав','святт','мчц','прор',
   'архієп','архиєп','єп','митр','архім','ігум','прот','протоієр','свящ','спов','сповід',
-  'блаж','чудотв','кн','обл','губ','безсрр','безср','безсребр','свв','страст','ісп','новомуч'];
+  'блаж','чудотв','кн','обл','губ','безсрр','безср','безсребр','свв','страст','ісп','новомуч',
+  'бл','патр','архидиякон','диякон','цар','равноап','рівноап','прмцц'];
 function vkazTitleHTML(title){
   let s = vkazEsc(title).replace(/\.\s+(?=[А-ЯІЇЄҐ])/g, '.\x03');
   TITLE_ABBR.forEach(a => { s = s.replace(new RegExp('(' + a + ')\\.\x03', 'gi'), '$1. '); });
-  return s.split('\x03').join('<br>');
+  // «до Р. Х.» — фіксована формула, не розривати
+  return s.split('\x03').join('<br>').replace(/Р\.<br>Х/g, 'Р. Х');
 }
 
 // Підпис неділі: у пасхальний період «N-а неділя після Пасхи», після Трійці —
@@ -2638,9 +2641,10 @@ function buildSohodni(){
   if (vrec){
     const vd = mkDet('Богослужбові вказівки');
     vd.open = true;   // авто-розкрито: видно шапку+зачала; служби всередині згорнуті
+    const vbody = document.createElement('div'); vbody.className = 'vkaz-body';   // бічні відступи
     const vt = document.createElement('div'); vt.className = 'vkaz-title';
     vt.innerHTML = vkazTitleHTML(vrec.title);   // кожне поминання (святий/ікона) з нового рядка
-    vd.appendChild(vt);
+    vbody.appendChild(vt);
     if (vrec.readings){
       const rb = document.createElement('div'); rb.className = 'vkaz-read';
       const rl = document.createElement('div'); rl.className = 'vkaz-read-lbl';
@@ -2651,30 +2655,31 @@ function buildSohodni(){
         rr.innerHTML = vkazEsc(r).replace(/\.\s+((?:Мф|Мк|Лк|Ін)\.,\s)/, '.<br>$1');
         rb.appendChild(rr);
       });
-      vd.appendChild(rb);
+      vbody.appendChild(rb);
     }
     if (vrec.notes){
       const nn = document.createElement('div'); nn.className = 'vkaz-notes'; nn.textContent = vrec.notes;
-      vd.appendChild(nn);
+      vbody.appendChild(nn);
     }
     if (vrec.special){
       const bn = document.createElement('div'); bn.className = 'vkaz-banner';
       bn.textContent = 'Особливий день (Страсний тиждень / Пасха / Благовіщення). Повний чин — у друкованому виданні вказівок; пасхальні служби — у меню додатка.';
-      vd.appendChild(bn);
+      vbody.appendChild(bn);
     }
     (vrec.sections || []).forEach(sec => {
       const label = SVC_LABEL[sec.svc] || sec.svc;
       const body = sec.text.replace(new RegExp('^(НА|На)\\s+' + sec.svc + '\\s*'), '');
       if (SVC_GOLD.has(sec.svc)){
-        const sd = mkDet(label); sd.style.margin = '6px 0 6px 8px';
+        const sd = mkDet(label); sd.style.margin = '6px 0';
         const p = document.createElement('div'); p.className = 'vkaz-text'; p.innerHTML = vkazBold(body);
-        sd.appendChild(p); mkClose(sd, label); vd.appendChild(sd);
+        sd.appendChild(p); mkClose(sd, label); vbody.appendChild(sd);
       } else {
         const l = document.createElement('div'); l.className = 'vkaz-plain-lbl'; l.textContent = label;
         const p = document.createElement('div'); p.className = 'vkaz-text'; p.innerHTML = vkazBold(body);
-        vd.appendChild(l); vd.appendChild(p);
+        vbody.appendChild(l); vbody.appendChild(p);
       }
     });
+    vd.appendChild(vbody);
     mkClose(vd, 'Богослужбові вказівки');
     out.appendChild(vd);
   } else {
