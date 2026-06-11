@@ -594,7 +594,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=82"></script>
+<script src="liturgy-data.js?v=83"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -2051,12 +2051,13 @@ function renderTyzhdenBody(){
   body.appendChild(ned);
 
   // БУДНІ — Пн–Сб (тропар, кондак, прокимен, алилуарій, причасний)
-  // Вседенні антифони (однакові щодня, Пс 91/92/94) — окремий згортний блок над днями
-  if (typeof VSEDENNI_ANTYFONY !== 'undefined')
-    body.appendChild(buildAntyfony(VSEDENNI_ANTYFONY, 'Антифони вседенні (будні) ▾', null));
   const DD = (typeof DENNI !== 'undefined') ? DENNI : [];
   DD.forEach(d => {
     const det = mkDet(d.day);
+    // Вседенні антифони — ОДИН запис VSEDENNI_ANTYFONY, показаний у кожному дні.
+    // Це не копії тексту: джерело одне, редагується в одному місці.
+    if (typeof VSEDENNI_ANTYFONY !== 'undefined')
+      det.appendChild(buildAntyfony(VSEDENNI_ANTYFONY, 'Антифони вседенні ▾', null));
     addRow(det, 'Тропар', d.tropar);
     addRow(det, 'Інший тропар', d.troparAlt);
     addRow(det, 'Кондак', d.kondak);
