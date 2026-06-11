@@ -422,6 +422,7 @@
   .ref-feast[open] .feast-name::before { content: var(--ic-open) " "; }
   .ref-feast .feast-meta { margin: 4px 0 0 18px; color: var(--feast-meta); font-size: 13px; }
   .ref-feast .feast-rank { opacity: .65; font-style: italic; }
+  .ref-note { margin: 8px 0 4px; padding: 8px 12px; border-left: 3px solid var(--gold-line, #b0944a); background: rgba(176,148,74,.08); color: #cdbf9a; font-style: italic; font-size: 15px; line-height: 1.5; border-radius: 3px; }
   /* кольори категорій свят — зі спільної палітри (:root угорі) */
   .ref-feast.cat-lord      .feast-name::before,
   .feast-legend .cat-lord      { color: var(--cat-lord); }       /* Господнє — червоний */
@@ -593,7 +594,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=80"></script>
+<script src="liturgy-data.js?v=81"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1744,7 +1745,7 @@ function renderYearBody(){
       row.className = 'ref-row';
       const l = document.createElement('div');
       l.className = 'ref-row-lbl';
-      l.textContent = (prok.label || label) + (prok.glas ? (', глас ' + prok.glas) : '');
+      l.textContent = label + (prok.glas ? (', глас ' + prok.glas) : '');
       const t = document.createElement('div');
       t.className = 'ref-row-txt'; t.textContent = prok.text;
       row.appendChild(l); row.appendChild(t);
@@ -1763,6 +1764,12 @@ function renderYearBody(){
       h.textContent = text;
       det.appendChild(h);
     };
+
+    // Примітка свята (напр. віддання / попразднство) — над усіма блоками
+    if (f.note){
+      const n = document.createElement('div'); n.className = 'ref-note'; n.textContent = f.note;
+      det.appendChild(n);
+    }
 
     // ── На вечірній ──
     if (f.prokVespers){
@@ -1811,7 +1818,9 @@ function renderYearBody(){
     if (Array.isArray(f.hymns)){
       f.hymns.forEach(h => {
         addProk('Тропар — ' + h.label, h.tropar);
+        addProk('Інший тропар — ' + h.label, h.troparAlt);
         addProk('Кондак — ' + h.label, h.kondak);
+        addProk('Інший кондак — ' + h.label, h.kondakAlt);
       });
     } else {
       addProk('Тропар', f.tropar);
@@ -1833,7 +1842,7 @@ function renderYearBody(){
     // Задостойник — приспів + ірмос одним блоком (приспів зверху, ірмос під ним, як прокимен зі стихом)
     if (f.zadostiynyk){
       const row = document.createElement('div'); row.className = 'ref-row';
-      const l = document.createElement('div'); l.className = 'ref-row-lbl'; l.textContent = 'Задостойник';
+      const l = document.createElement('div'); l.className = 'ref-row-lbl'; l.textContent = (f.zadostiynyk.label || 'Задостойник');
       row.appendChild(l);
       if (f.zadostiynyk.pryspiv){
         const t = document.createElement('div'); t.className = 'ref-row-txt'; t.textContent = f.zadostiynyk.pryspiv;
