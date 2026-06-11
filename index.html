@@ -529,8 +529,6 @@
   .vkaz-read-lbl { color: var(--feast-meta); font-size: 11.5px; text-transform: uppercase;
     letter-spacing: .04em; margin-bottom: 3px; }
   .vkaz-read .r { color: #84b3ec; font-size: 14px; line-height: 1.55; margin-bottom: 4px; }
-  .vkaz-read .rpfx { display: block; }                       /* підпис «Літ. –» окремим рядком */
-  .vkaz-read .rline { display: block; padding-left: 1.1em; } /* апостол / євангеліє — рівно під ним */
   .vkaz-notes { font-style: italic; color: var(--feast-meta); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
   .vkaz-banner { background: rgba(125,95,180,.14); border-radius: 8px; padding: 8px 11px;
     color: var(--feast-name); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
@@ -2525,13 +2523,27 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=91';
+  s.src = 'data-vkazivky-2026.js?v=92';
   s.onload = () => { if (document.getElementById('sohodniOut')) buildSohodni(); };
   document.head.appendChild(s);
 }
 function vkazRec(iso){
   if (typeof VKAZIVKY_2026 === 'undefined') return null;
   return VKAZIVKY_2026.find(d => d.date === iso.slice(5)) || null;
+}
+
+// Заголовок дня → кожне поминання (святий / ікона) з нового рядка. Ріжемо на «. »
+// перед великою літерою, КРІМ після скорочень (і префіксів поминань — Прп./Мч./Свт.…,
+// і внутрішніх — архієп./єп.…), щоб не рвати «Прп. Давида» чи «архієп. Суздальського».
+// Розрив лишається лише на МЕЖІ поминань (після дати/імені). Так і ікони БМ — окремим рядком.
+const TITLE_ABBR = ['прп','прпп','мч','мчч','мц','мцц','свт','свтт','сщмч','сщмчч','прмч',
+  'прмчч','прмц','прмцц','ап','апп','вмч','вмц','блж','блгв','прав','святт','мчц','прор',
+  'архієп','архиєп','єп','митр','архім','ігум','прот','протоієр','свящ','спов','сповід',
+  'блаж','чудотв','кн','обл','губ','безсрр','безср','безсребр','свв','страст','ісп','новомуч'];
+function vkazTitleHTML(title){
+  let s = vkazEsc(title).replace(/\.\s+(?=[А-ЯІЇЄҐ])/g, '.\x03');
+  TITLE_ABBR.forEach(a => { s = s.replace(new RegExp('(' + a + ')\\.\x03', 'gi'), '$1. '); });
+  return s.split('\x03').join('<br>');
 }
 
 // Підпис неділі: у пасхальний період «N-а неділя після Пасхи», після Трійці —
@@ -2627,8 +2639,7 @@ function buildSohodni(){
     const vd = mkDet('Богослужбові вказівки');
     vd.open = true;   // авто-розкрито: видно шапку+зачала; служби всередині згорнуті
     const vt = document.createElement('div'); vt.className = 'vkaz-title';
-    // ікони Божої Матері — з нового рядка (окрема пам'ять дня)
-    vt.innerHTML = vkazEsc(vrec.title).replace(/\s*(Ікон[аи]?\s+(?:Божої Матері|Пресвятої))/g, '<br>$1');
+    vt.innerHTML = vkazTitleHTML(vrec.title);   // кожне поминання (святий/ікона) з нового рядка
     vd.appendChild(vt);
     if (vrec.readings){
       const rb = document.createElement('div'); rb.className = 'vkaz-read';
@@ -2636,13 +2647,8 @@ function buildSohodni(){
       rl.textContent = 'Зачала (читання)'; rb.appendChild(rl);
       vrec.readings.forEach(r => {
         const rr = document.createElement('div'); rr.className = 'r';
-        // підпис («Літ. –» / «Ран. –» / «Свв.:») окремим рядком, апостол і Євангеліє — нижче рівно
-        const mp = r.match(/^(.*?[–:]\s)([\s\S]*)$/);
-        if (mp){
-          const parts = mp[2].replace(/\.\s+((?:Мф|Мк|Лк|Ін)\.,)/, '.$1').split('');
-          rr.innerHTML = '<span class="rpfx">' + vkazEsc(mp[1].trim()) + '</span>' +
-            parts.map(p => '<span class="rline">' + vkazEsc(p.trim()) + '</span>').join('');
-        } else rr.textContent = r;
+        // Євангеліє — з нового рядка (просто, без відступу — щоб довгі рядки не з'їжджали)
+        rr.innerHTML = vkazEsc(r).replace(/\.\s+((?:Мф|Мк|Лк|Ін)\.,\s)/, '.<br>$1');
         rb.appendChild(rr);
       });
       vd.appendChild(rb);
