@@ -491,13 +491,20 @@
   /* «Сьогодні» — вбудований календар-місяць (стиль додатка: темний + золото) */
   .cal { border: 1px solid var(--feast-border); border-radius: 10px; background: var(--feast-bg);
     padding: 10px 8px 6px; margin: 10px 0; user-select: none; }
-  .cal-head { text-align: center; margin: 2px 4px 8px; }
-  .cal-title { color: var(--gold-text); font-weight: 600; font-size: 15.5px; }
-  .cal-foot { display: flex; justify-content: center; gap: 12px; margin: 10px 0 6px; }
+  .cal-title { color: var(--gold-text); font-weight: 600; font-size: 15.5px;
+    flex: 1; text-align: center; white-space: nowrap; }
+  .cal-foot { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 10px 2px 6px; }
   .cal-btn { color: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: 8px;
-    padding: 7px 26px; font-size: 16px; line-height: 1.2; cursor: pointer; background: none; }
+    padding: 7px 20px; font-size: 16px; line-height: 1.2; cursor: pointer; background: none; }
   .cal-btn:active { background: var(--gold-strip-1); }
-  .cal-btn.cal-today-btn { font-size: 13px; padding: 8px 16px; }
+  .cal-btn.cal-today-btn { font-size: 13px; padding: 8px 14px; }
+  .cal-search { width: 100%; box-sizing: border-box; padding: 9px 13px; margin: 6px 0 2px;
+    background: var(--feast-bg); border: 1px solid var(--feast-border); border-radius: 10px;
+    color: var(--feast-txt); font-size: 15px; outline: none; }
+  .cal-search::placeholder { color: var(--feast-meta); }
+  .cal-sres-item { padding: 9px 10px; border-bottom: 1px solid var(--feast-line);
+    color: var(--feast-txt); font-size: 15px; cursor: pointer; }
+  .cal-sres-item .d { color: var(--feast-meta); font-size: 12.5px; margin-top: 2px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
   .cal-dow { text-align: center; color: var(--feast-meta); font-size: 11.5px; padding: 4px 0 6px; }
   .cal-dow.sun { color: var(--cat-lord); opacity: .85; }
@@ -533,7 +540,7 @@
     </details>
 
     <div class="drawer-group">Довідник</div>
-    <a onclick="openSohodniRef()">Сьогодні — підбір за датою (проба)</a>
+    <a onclick="openSohodniRef()">Календар</a>
     <a onclick="openReference()">Додаткові прохання на ектеніях</a>
     <a onclick="openYearRef()">Прокимни, величання, відпусти</a>
     <a onclick="openTyzhdenRef()">Тиждень — гласи й денні (Пн–Нд)</a>
@@ -2199,6 +2206,44 @@ function renderSohodniBody(){
   const [y, m] = sohodniISO.split('-').map(Number);
   calY = y; calM = m - 1;
 
+  // пошук свята / святого за назвою → перехід на його дату
+  const inp = document.createElement('input');
+  inp.className = 'cal-search'; inp.type = 'search';
+  inp.placeholder = 'Пошук свята або святого…';
+  const sres = document.createElement('div');
+  const normQ = s => s.toLowerCase().replace(/[’ʼ]/g, "'");
+  const MOVABLE_OFF = { 'Вхід Господній в Єрусалим': -7, 'Вознесіння Господнє': 39, 'П’ятидесятниця': 49 };
+  inp.oninput = () => {
+    sres.innerHTML = '';
+    const q = normQ(inp.value.trim());
+    if (q.length < 2) return;
+    const FF = (typeof FEASTS !== 'undefined') ? FEASTS : [];
+    FF.filter(f => normQ(f.name).includes(q)).slice(0, 8).forEach(f => {
+      const it = document.createElement('div');
+      it.className = 'cal-sres-item';
+      it.innerHTML = '<div>' + f.name + '</div>' + (f.dateLabel ? '<div class="d">' + f.dateLabel + '</div>' : '');
+      it.onclick = () => {
+        let iso = null;
+        if (f.date){
+          iso = calY + '-' + f.date;
+        } else if (MOVABLE_OFF[f.name] !== undefined){
+          const dd = new Date(paschaDate(calY));
+          dd.setUTCDate(dd.getUTCDate() + MOVABLE_OFF[f.name]);
+          iso = dd.toISOString().slice(0, 10);
+        }
+        if (!iso) return;
+        sohodniISO = iso;
+        const [yy, mm] = iso.split('-').map(Number);
+        calY = yy; calM = mm - 1;
+        inp.value = ''; sres.innerHTML = '';
+        drawCal(); buildSohodni(true);
+      };
+      sres.appendChild(it);
+    });
+  };
+  body.appendChild(inp);
+  body.appendChild(sres);
+
   const cal = document.createElement('div');
   cal.id = 'sohodniCal';
   body.appendChild(cal);
@@ -2234,13 +2279,6 @@ function drawCal(){
   if (!wrap) return;
   wrap.innerHTML = '';
   const cal = document.createElement('div'); cal.className = 'cal';
-
-  // шапка — лише назва місяця; кнопки знизу (щоб дотягтись великим пальцем)
-  const head = document.createElement('div'); head.className = 'cal-head';
-  const title = document.createElement('div'); title.className = 'cal-title';
-  title.textContent = MONN_UA[calM] + ' ' + calY;
-  head.appendChild(title);
-  cal.appendChild(head);
 
   // сітка: Пн..Нд (як у церковних календарях, неділя — остання)
   const grid = document.createElement('div'); grid.className = 'cal-grid';
@@ -2278,32 +2316,36 @@ function drawCal(){
     c.onclick = () => {
       sohodniISO = iso;
       if (monthOff !== 0){ calY = y; calM = mIdx; }
-      drawCal(); buildSohodni();
+      drawCal(); buildSohodni(true);
     };
     grid.appendChild(c);
     col = (col + 1) % 7;
   };
   for (let i = 0; i < firstDow; i++) mkDay(prevDays - firstDow + 1 + i, -1);
   for (let d = 1; d <= daysIn; d++) mkDay(d, 0);
-  const tail = (7 - (firstDow + daysIn) % 7) % 7;
+  // завжди 6 тижнів (42 клітинки) — висота календаря стала, кнопки не скачуть
+  const tail = 42 - firstDow - daysIn;
   for (let i = 1; i <= tail; i++) mkDay(i, +1);
   cal.appendChild(grid);
 
-  // кнопки знизу: ‹ Сьогодні ›
+  // керування знизу (під великий палець): ‹ Назва місяця › Сьогодні
   const foot = document.createElement('div'); foot.className = 'cal-foot';
   const mkBtn = (txt, cls, fn) => {
     const b = document.createElement('button');
     b.className = 'cal-btn' + (cls ? ' ' + cls : ''); b.textContent = txt; b.onclick = fn;
     return b;
   };
+  const title = document.createElement('div'); title.className = 'cal-title';
+  title.textContent = MONN_UA[calM] + ' ' + calY;
   foot.appendChild(mkBtn('‹', '', () => calShift(-1)));
+  foot.appendChild(title);
+  foot.appendChild(mkBtn('›', '', () => calShift(1)));
   foot.appendChild(mkBtn('Сьогодні', 'cal-today-btn', () => {
     sohodniISO = todayISO();
     const [y, m] = sohodniISO.split('-').map(Number);
     calY = y; calM = m - 1;
-    drawCal(); buildSohodni();
+    drawCal(); buildSohodni(true);
   }));
-  foot.appendChild(mkBtn('›', '', () => calShift(1)));
   cal.appendChild(foot);
 
   // свайп ліворуч/праворуч — гортання місяців
@@ -2319,7 +2361,7 @@ function drawCal(){
   wrap.appendChild(cal);
 }
 
-function buildSohodni(){
+function buildSohodni(scrollToDay){
   const out = document.getElementById('sohodniOut');
   if (!out) return;
   out.innerHTML = '';
@@ -2338,6 +2380,8 @@ function buildSohodni(){
     title += ' · ' + Math.round((info.days - 49) / 7) + '-а після П’ятидесятниці';
   head.textContent = title;
   out.appendChild(head);
+  // після тапу по дню сторінка сама м'яко під'їжджає до плашки дня
+  if (scrollToDay) setTimeout(() => head.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
 
   const note = (txt) => {
     const n = document.createElement('div');
@@ -2428,7 +2472,7 @@ function buildSohodni(){
   }
 }
 function openSohodniRef(){
-  openRefPage('Сьогодні — підбір за датою', renderSohodniBody);
+  openRefPage('Календар', renderSohodniBody);
 }
 
 // Загальні святим ЗА ЧИНОМ — словник ZAHALNI. Кожен чин = акордеон.
