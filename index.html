@@ -513,8 +513,8 @@
   .ref-day-sub { font-size: 13px; font-weight: 400; opacity: .85; margin-top: 3px; }
   /* Богослужбові вказівки дня */
   .vkaz-title { font-weight: 600; color: var(--feast-name); font-size: 15px; line-height: 1.5; margin: 4px 0 2px; }
-  .vkaz-read { background: rgba(70,110,170,.12); border: 1px solid rgba(90,130,190,.32);
-    border-radius: 8px; padding: 7px 11px; margin: 8px 0; }
+  .vkaz-read { border: 1px solid rgba(90,130,190,.38); border-radius: 8px;
+    padding: 7px 11px; margin: 8px 0; }
   .vkaz-read-lbl { color: var(--feast-meta); font-size: 11.5px; text-transform: uppercase;
     letter-spacing: .04em; margin-bottom: 3px; }
   .vkaz-read .r { color: #84b3ec; font-size: 14px; line-height: 1.55; }
@@ -2455,7 +2455,8 @@ const SVC_GOLD = new Set(['ВЕЛИКІЙ ВЕЧІРНІ','МАЛІЙ ВЕЧІР
   'ПОВЕЧІР’Ї','ПОЛУНОШНИЦІ']);
 
 // Рубрики — типові початки вказівок; жирним лише на початку речення (після . » – або з краю).
-const VKAZ_RUBRICS = ['На «Господи, взиваю»','На «Бог Господь»','На «Бог – Господь»','На стиховні',
+const VKAZ_RUBRICS = ['Примітка','Примітки','Варіанти','Перший варіант','Другий варіант',
+  'На «Господи, взиваю»','На «Бог Господь»','На «Бог – Господь»','На стиховні',
   'На літії','На хвалітніх','Входу немає','Вхід','Прокимен дня','Прокимен, алилуарій і причасний',
   'Прокимен','Паремії','Після Трисвятого','Після 50-го псалма','Після [0-9]+-ої пісні',
   'Кафизми','Кафізми','Кафизма','Кафізма','Малі єктенії','Малих єктеній','Мала єктенія',
@@ -2473,7 +2474,7 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=90';
+  s.src = 'data-vkazivky-2026.js?v=91';
   s.onload = () => { if (document.getElementById('sohodniOut')) buildSohodni(); };
   document.head.appendChild(s);
 }
@@ -2568,13 +2569,18 @@ function buildSohodni(){
   if (vrec){
     const vd = mkDet('Богослужбові вказівки');
     const vt = document.createElement('div'); vt.className = 'vkaz-title';
-    vt.textContent = vrec.title; vd.appendChild(vt);
+    // ікони Божої Матері — з нового рядка (окрема пам'ять дня)
+    vt.innerHTML = vkazEsc(vrec.title).replace(/\s*(Ікон[аи]?\s+(?:Божої Матері|Пресвятої))/g, '<br>$1');
+    vd.appendChild(vt);
     if (vrec.readings){
       const rb = document.createElement('div'); rb.className = 'vkaz-read';
       const rl = document.createElement('div'); rl.className = 'vkaz-read-lbl';
       rl.textContent = 'Зачала (читання)'; rb.appendChild(rl);
       vrec.readings.forEach(r => {
-        const rr = document.createElement('div'); rr.className = 'r'; rr.textContent = r; rb.appendChild(rr);
+        const rr = document.createElement('div'); rr.className = 'r';
+        // Євангеліє з нового рядка (рядок «Літ. – Апостол. Мф./Мк./Лк./Ін., … зач.»)
+        rr.innerHTML = vkazEsc(r).replace(/\.\s+((?:Мф|Мк|Лк|Ін)\.,\s)/, '.<br>$1');
+        rb.appendChild(rr);
       });
       vd.appendChild(rb);
     }
