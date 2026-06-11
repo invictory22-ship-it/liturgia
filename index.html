@@ -518,6 +518,7 @@
   .vkaz-read-lbl { color: var(--feast-meta); font-size: 11.5px; text-transform: uppercase;
     letter-spacing: .04em; margin-bottom: 3px; }
   .vkaz-read .r { color: #84b3ec; font-size: 14px; line-height: 1.55; }
+  .vkaz-read .r .gospel { display: block; padding-left: 1.7em; }  /* Євангеліє з відступом під Апостолом */
   .vkaz-notes { font-style: italic; color: var(--feast-meta); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
   .vkaz-banner { background: rgba(125,95,180,.14); border-radius: 8px; padding: 8px 11px;
     color: var(--feast-name); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
@@ -2578,8 +2579,8 @@ function buildSohodni(){
       rl.textContent = 'Зачала (читання)'; rb.appendChild(rl);
       vrec.readings.forEach(r => {
         const rr = document.createElement('div'); rr.className = 'r';
-        // Євангеліє з нового рядка (рядок «Літ. – Апостол. Мф./Мк./Лк./Ін., … зач.»)
-        rr.innerHTML = vkazEsc(r).replace(/\.\s+((?:Мф|Мк|Лк|Ін)\.,\s)/, '.<br>$1');
+        // Євангеліє — з нового рядка і з відступом ПІД Апостолом (рядок «Літ. – Апостол. Єв.»)
+        rr.innerHTML = vkazEsc(r).replace(/\.\s+((?:Мф|Мк|Лк|Ін)\.,\s[\s\S]*)$/, '.<span class="gospel">$1</span>');
         rb.appendChild(rr);
       });
       vd.appendChild(rb);
