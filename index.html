@@ -535,8 +535,10 @@
   .vkaz-notes { font-style: italic; color: var(--feast-meta); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
   .vkaz-banner { background: rgba(125,95,180,.14); border-radius: 8px; padding: 8px 11px;
     color: var(--feast-name); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
-  .vkaz-text { color: var(--feast-txt); font-size: 14.5px; line-height: 1.62; margin: 4px 0 2px; }
+  .vkaz-text { color: var(--feast-txt); font-size: 14.5px; line-height: 1.6; margin: 4px 0 2px; padding: 0 4px; }
   .vkaz-text b { color: var(--feast-name); font-weight: 600; }
+  .vkaz-text .vp { display: block; margin: 0 0 6px; }   /* абзац на кожну рубрику */
+  .vkaz-text .vp:last-child { margin-bottom: 0; }
   .vkaz-plain-lbl { font-weight: 600; color: var(--gold-text); font-size: 14px; margin: 11px 0 2px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
   .cal-dow { text-align: center; color: var(--feast-meta); font-size: 11.5px; padding: 4px 0 6px; }
@@ -578,11 +580,11 @@
     </details>
 
     <div class="drawer-group">Довідник</div>
-    <a onclick="openSohodniRef()">Календар</a>
-    <a onclick="openReference()">Додаткові прохання на ектеніях</a>
-    <a onclick="openYearRef()">Прокимни, величання, відпусти</a>
-    <a onclick="openTyzhdenRef()">Тиждень — гласи й денні (Пн–Нд)</a>
-    <a onclick="openZahalniRef()">Загальні святим за чином (святителю, апостолу, мученику…)</a>
+    <a data-ref="calendar" onclick="openSohodniRef()">Календар</a>
+    <a data-ref="prohannia" onclick="openReference()">Додаткові прохання на ектеніях</a>
+    <a data-ref="year" onclick="openYearRef()">Прокимни, величання, відпусти</a>
+    <a data-ref="tyzhden" onclick="openTyzhdenRef()">Тиждень — гласи й денні (Пн–Нд)</a>
+    <a data-ref="zahalni" onclick="openZahalniRef()">Загальні святим за чином (святителю, апостолу, мученику…)</a>
     <a class="soon">Наука про відпусти</a>
     <a class="soon">Молитви перед / після Причастя</a>
 
@@ -1508,12 +1510,18 @@ function toggleMenu(){
   if (open) markActiveService();
 }
 // Підсвітити в меню поточну службу (золотим). Якщо активна — пасхальна, розгорнути її групу.
+let currentRefId = null;   // який довідник відкрито (null = дивимось службу)
 function markActiveService(){
+  const refOpen = document.getElementById('refPage').classList.contains('open');
+  // службу підсвічуємо лише коли НЕ відкрито довідник; інакше — відкритий довідник
   document.querySelectorAll('.drawer a[data-svc]').forEach(a=>{
-    a.classList.toggle('active-svc', a.getAttribute('data-svc') === currentServiceId);
+    a.classList.toggle('active-svc', !refOpen && a.getAttribute('data-svc') === currentServiceId);
+  });
+  document.querySelectorAll('.drawer a[data-ref]').forEach(a=>{
+    a.classList.toggle('active-svc', refOpen && a.getAttribute('data-ref') === currentRefId);
   });
   const pf = document.getElementById('paschaFold');
-  if (pf && (currentServiceId === 'pascha-liturgy' || currentServiceId === 'pasky')) pf.open = true;
+  if (pf && !refOpen && (currentServiceId === 'pascha-liturgy' || currentServiceId === 'pasky')) pf.open = true;
 }
 // --- ОБРАНЕ (зберігається на цьому пристрої) ---
 // Ключ прохання = текст його заголовка. Обране тримаємо як список таких ключів.
@@ -1751,11 +1759,12 @@ function renderReferenceBody(){
 }
 
 // Спільне відкриття сторінки-довідника: ставимо заголовок і будуємо тіло.
-function openRefPage(title, buildBody){
+function openRefPage(title, buildBody, refId){
   document.getElementById('drawer').classList.remove('open');
   document.getElementById('drawerOverlay').classList.remove('open');
   const t = document.getElementById('refTitle');
   if (t) t.textContent = title;
+  currentRefId = refId || null;
   buildBody();
   const p = document.getElementById('refPage');
   p.classList.add('open'); p.scrollTop = 0;
@@ -1763,9 +1772,9 @@ function openRefPage(title, buildBody){
   updateStickyClose();
 }
 function openReference(){
-  openRefPage('Додаткові прохання на ектеніях', renderReferenceBody);
+  openRefPage('Додаткові прохання на ектеніях', renderReferenceBody, 'prohannia');
 }
-function closeReference(){ document.getElementById('refPage').classList.remove('open'); updateStickyClose(); }
+function closeReference(){ document.getElementById('refPage').classList.remove('open'); currentRefId = null; updateStickyClose(); }
 
 // Довідник «На весь рік» — ПО СВЯТАХ: відкрив свято, бачиш усе про нього
 // (величання, прокимни, вхідне, відпуст). Дані — зі словника FEASTS.
@@ -1958,7 +1967,7 @@ function makeFeastCard(f){
     return det;
 }
 function openYearRef(){
-  openRefPage('Прокимни, величання, відпусти', renderYearBody);
+  openRefPage('Прокимни, величання, відпусти', renderYearBody, 'year');
 }
 
 // Довідник: НЕДІЛЬНІ ТРОПАРІ Й КОНДАКИ — 8 гласів (Октоїх). Окрема картка-секція.
@@ -2178,7 +2187,7 @@ function renderTyzhdenBody(){
   });
 }
 function openTyzhdenRef(){
-  openRefPage('Тиждень — гласи й денні', renderTyzhdenBody);
+  openRefPage('Тиждень — гласи й денні', renderTyzhdenBody, 'tyzhden');
 }
 
 // ============================================================================
@@ -2506,7 +2515,11 @@ const VKAZ_RUBRICS = ['Примітка','Примітки','Варіанти','
 // межу слова даємо lookahead-ом (JS \b не розуміє кирилиці)
 const VKAZ_RE = new RegExp('(^|[.»–]\\s+)(' + VKAZ_RUBRICS.join('|') + ')(?=[\\s.,:;»–)]|$)', 'g');
 function vkazEsc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function vkazBold(text){ return vkazEsc(text).replace(VKAZ_RE, (m,p,r) => p + '<b>' + r + '</b>'); }
+// Жирні рубрики + АБЗАЦИ: кожна рубрика починає новий блок-абзац (\x02 — роздільник).
+function vkazBold(text){
+  const html = vkazEsc(text).replace(VKAZ_RE, (m, p, r) => (p ? p.replace(/\s+$/, '') + '\x02' : '') + '<b>' + r + '</b>');
+  return html.split('\x02').map(s => '<span class="vp">' + s.trim() + '</span>').join('');
+}
 
 let _vkazInjected = false;
 function ensureVkazivky(){
@@ -2705,7 +2718,7 @@ function buildSohodni(){
 }
 function openSohodniRef(){
   ensureVkazivky();   // підвантажити вказівки одразу при відкритті календаря
-  openRefPage('', renderSohodniBody);   // без заголовка — і так зрозуміло, що календар
+  openRefPage('', renderSohodniBody, 'calendar');   // без заголовка — і так зрозуміло, що календар
 }
 
 // Загальні святим ЗА ЧИНОМ — словник ZAHALNI. Кожен чин = акордеон.
@@ -2758,7 +2771,7 @@ function renderZahalniBody(){
   });
 }
 function openZahalniRef(){
-  openRefPage('Загальні святим за чином', renderZahalniBody);
+  openRefPage('Загальні святим за чином', renderZahalniBody, 'zahalni');
 }
 
 document.getElementById('soloMode').addEventListener('change',(e)=>{
