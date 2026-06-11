@@ -1,79 +1,68 @@
 # -*- coding: utf-8 -*-
 """Перевірка цілісності перед комітом:
- - liturgy-data.js: валідний JSON (немає зайвих/відсутніх ком),
+ - liturgy-data.js і data-dovidnyk.js: валідний JSON (немає зайвих/відсутніх ком),
  - index.html: збалансовані дужки в <script>.
 Викликається git-гачком pre-commit. Якщо щось не так — коміт скасовується."""
 import re, json, sys
 
 errors = []
 
-# 1) liturgy-data.js — два масиви: BLOCKS (текст служби) і FEASTS (словник свят).
-# Кожен масив закінчується рядком, що починається з "];" — нежадібно беремо до нього.
-try:
-    txt = open('liturgy-data.js', encoding='utf-8').read()
+def load(fname):
+    try:
+        return open(fname, encoding='utf-8').read()
+    except FileNotFoundError:
+        return None
 
-    # --- BLOCKS (обов'язковий) ---
-    m = re.search(r'const BLOCKS = (\[[\s\S]*?\n\]);', txt)
-    if not m:
-        errors.append('liturgy-data.js: не знайдено const BLOCKS = [...]')
-    else:
-        blocks = json.loads(m.group(1))
-        for i, b in enumerate(blocks):
-            if 't' not in b or 'text' not in b:
-                errors.append('liturgy-data.js: блок #%d без t/text' % i)
-                break
+def find_const(txt, name):
+    m = re.search(r'const %s = (\[[\s\S]*?\n\]);' % name, txt)
+    return m.group(1) if m else None
 
-    # --- FEASTS (необов'язковий словник свят) ---
-    mf = re.search(r'const FEASTS = (\[[\s\S]*?\n\]);', txt)
-    if mf:
-        feasts = json.loads(mf.group(1))
-        for i, f in enumerate(feasts):
-            if 'name' not in f:
-                errors.append('liturgy-data.js: свято #%d без name' % i)
-                break
+def check_blocks_array(fname, txt, name, required=False):
+    """Масив блоків служби: кожен елемент має t і text."""
+    src = find_const(txt, name)
+    if src is None:
+        if required:
+            errors.append('%s: не знайдено const %s = [...]' % (fname, name))
+        return
+    for i, b in enumerate(json.loads(src)):
+        if 't' not in b or 'text' not in b:
+            errors.append('%s: %s блок #%d без t/text' % (fname, name, i))
+            break
 
-    # --- GLASI (необов'язковий: 8 гласів, тропар/кондак) ---
-    mg = re.search(r'const GLASI = (\[[\s\S]*?\n\]);', txt)
-    if mg:
-        glasi = json.loads(mg.group(1))
-        for i, g in enumerate(glasi):
-            if 'glas' not in g:
-                errors.append('liturgy-data.js: глас #%d без glas' % i)
-                break
+def check_records(fname, txt, name, fields):
+    """Масив записів довідника: кожен елемент має вказані поля."""
+    src = find_const(txt, name)
+    if src is None:
+        return
+    for i, r in enumerate(json.loads(src)):
+        if any(k not in r for k in fields):
+            errors.append('%s: %s #%d без %s' % (fname, name, i, '/'.join(fields)))
+            break
 
-    # --- DENNI (необов'язковий: денні прокимни/алилуарії/причасні за днями тижня) ---
-    md = re.search(r'const DENNI = (\[[\s\S]*?\n\]);', txt)
-    if md:
-        denni = json.loads(md.group(1))
-        for i, d in enumerate(denni):
-            if 'day' not in d or 'rows' not in d:
-                errors.append('liturgy-data.js: денний #%d без day/rows' % i)
-                break
+# 1) liturgy-data.js — служби (BLOCKS обов'язковий, PASKY/PASKHA_LITURGY якщо є)
+txt = load('liturgy-data.js')
+if txt is not None:
+    try:
+        check_blocks_array('liturgy-data.js', txt, 'BLOCKS', required=True)
+        for name in ('PASKY', 'PASKHA_LITURGY'):
+            check_blocks_array('liturgy-data.js', txt, name)
+    except json.JSONDecodeError as e:
+        errors.append('liturgy-data.js: ПОМИЛКА JSON (мабуть зайва/відсутня кома) - рядок %d' % e.lineno)
 
-    # --- ZAHALNI (необов'язковий: загальні святим за чином) ---
-    mz = re.search(r'const ZAHALNI = (\[[\s\S]*?\n\]);', txt)
-    if mz:
-        zahalni = json.loads(mz.group(1))
-        for i, z in enumerate(zahalni):
-            if 'chyn' not in z:
-                errors.append('liturgy-data.js: ZAHALNI #%d без chyn' % i)
-                break
+# 2) data-dovidnyk.js — довідник «На весь рік»
+dtxt = load('data-dovidnyk.js')
+if dtxt is not None:
+    try:
+        if find_const(dtxt, 'FEASTS') is None:
+            errors.append('data-dovidnyk.js: не знайдено const FEASTS = [...]')
+        check_records('data-dovidnyk.js', dtxt, 'FEASTS', ('name',))
+        check_records('data-dovidnyk.js', dtxt, 'GLASI', ('glas',))
+        check_records('data-dovidnyk.js', dtxt, 'DENNI', ('day', 'rows'))
+        check_records('data-dovidnyk.js', dtxt, 'ZAHALNI', ('chyn',))
+    except json.JSONDecodeError as e:
+        errors.append('data-dovidnyk.js: ПОМИЛКА JSON (мабуть зайва/відсутня кома) - рядок %d' % e.lineno)
 
-    # --- PASKY та інші служби (масиви блоків, як BLOCKS) ---
-    for name in ('PASKY', 'PASKHA_LITURGY'):
-        ms = re.search(r'const %s = (\[[\s\S]*?\n\]);' % name, txt)
-        if ms:
-            blk = json.loads(ms.group(1))
-            for i, b in enumerate(blk):
-                if 't' not in b or 'text' not in b:
-                    errors.append('liturgy-data.js: %s блок #%d без t/text' % (name, i))
-                    break
-except json.JSONDecodeError as e:
-    errors.append('liturgy-data.js: ПОМИЛКА JSON (мабуть зайва/відсутня кома) - рядок %d' % e.lineno)
-except FileNotFoundError:
-    pass
-
-# 2) index.html — баланс дужок у script (повний прохід зі станами рядків)
+# 3) index.html — баланс дужок у script (повний прохід зі станами рядків)
 try:
     h = open('index.html', encoding='utf-8').read()
     js = ''.join(re.findall(r'<script>(.*?)</script>', h, re.S))
@@ -117,5 +106,5 @@ if errors:
     sys.stderr.write('Виправ помилку (або поклич Claude) і спробуй ще раз.\n\n')
     sys.exit(1)
 
-print('Перевірка OK: liturgy-data.js валідний, index.html збалансований.')
+print('Перевірка OK: liturgy-data.js і data-dovidnyk.js валідні, index.html збалансований.')
 sys.exit(0)

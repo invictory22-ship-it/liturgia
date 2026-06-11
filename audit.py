@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """ДАТЧИК повноти свят (не блокує коміт — лише звіт).
-Проходить FEASTS у liturgy-data.js і шукає прогалини:
+Проходить FEASTS у data-dovidnyk.js і шукає прогалини:
   A) прокимен/алилуарій/прокимен на утрені має text, але БЕЗ стиха — це завжди помилка;
   B) свято без раннього (matins) прокимна / утреннього Євангелія — може бути нормою
      (залежить від рангу свята), показуємо для звірки.
@@ -9,7 +9,7 @@
 import re, json, sys
 sys.stdout.reconfigure(encoding='utf-8')
 
-txt = open('liturgy-data.js', encoding='utf-8').read()
+txt = open('data-dovidnyk.js', encoding='utf-8').read()
 m = re.search(r'const FEASTS = (\[[\s\S]*?\n\]);', txt)
 feasts = json.loads(m.group(1))
 
