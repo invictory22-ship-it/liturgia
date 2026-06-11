@@ -510,6 +510,7 @@
     </details>
 
     <div class="drawer-group">Довідник</div>
+    <a onclick="openSohodniRef()">Сьогодні — підбір за датою (проба)</a>
     <a onclick="openReference()">Додаткові прохання на ектеніях</a>
     <a onclick="openYearRef()">Прокимни, величання, відпусти</a>
     <a onclick="openTyzhdenRef()">Тиждень — гласи й денні (Пн–Нд)</a>
@@ -596,8 +597,8 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=86"></script>
-<script src="data-dovidnyk.js?v=84"></script>
+<script src="liturgy-data.js?v=87"></script>
+<script src="data-dovidnyk.js?v=87"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1726,7 +1727,12 @@ function renderYearBody(){
     body.appendChild(lg);
   }
 
-  FF.forEach(f => {
+  FF.forEach(f => body.appendChild(makeFeastCard(f)));
+}
+
+// Картка ОДНОГО свята (акордеон з усіма пропріями). Використовується довідником
+// «На весь рік» і панеллю «Сьогодні» (рушій M) — джерело одне, рендер один.
+function makeFeastCard(f){
     const det = document.createElement('details');
     det.className = 'ref-feast' + (f.type ? ' cat-' + f.type : '');
     det.addEventListener('toggle', updateStickyClose);   // показати/сховати липку смугу
@@ -1881,8 +1887,7 @@ function renderYearBody(){
     close.onclick = () => { det.open = false; };
     det.appendChild(close);
 
-    body.appendChild(det);
-  });
+    return det;
 }
 function openYearRef(){
   openRefPage('Прокимни, величання, відпусти', renderYearBody);
@@ -2106,6 +2111,190 @@ function renderTyzhdenBody(){
 }
 function openTyzhdenRef(){
   openRefPage('Тиждень — гласи й денні', renderTyzhdenBody);
+}
+
+// ============================================================================
+//  «СЬОГОДНІ» — простий рушій М (проба). Обираєш дату → день тижня, глас
+//  (рахується від Пасхи) і свята цього дня з наших карток (FEASTS).
+//  Це лише ПІДБІР з наявних довідників — не повний типікон.
+// ============================================================================
+
+// Пасха за олександрійською пасхалією (як у ПЦУ: нерухомі свята — новоюліанські,
+// Пасха — за юліанським численням). Гаусів алгоритм → юліанська дата → +13 днів
+// (різниця календарів для 1900–2099) → григоріанська (цивільна) дата.
+function paschaDate(year){
+  const a = year % 4, b = year % 7, c = year % 19;
+  const d = (19 * c + 15) % 30;
+  const e = (2 * a + 4 * b - d + 34) % 7;
+  const day = d + e + 114;                 // юліанські березень/квітень
+  const month = Math.floor(day / 31);      // 3 = березень, 4 = квітень
+  const dom = (day % 31) + 1;
+  const g = new Date(Date.UTC(year, month - 1, dom));
+  g.setUTCDate(g.getUTCDate() + 13);
+  return g;
+}
+
+// Глас тижня: Антипасха (2-а неділя) = глас 1, далі +1 щотижня по колу 1..8.
+// Тиждень гласу: неділя → субота. Світла седмиця — особлива (глас щодня свій).
+function dayInfo(dt){
+  const year = dt.getUTCFullYear();
+  const pasCur = paschaDate(year);
+  let pas = pasCur;
+  if (dt < pas) pas = paschaDate(year - 1);
+  const days = Math.round((dt - pas) / 86400000);          // днів від Пасхи
+  const toCur = Math.round((dt - pasCur) / 86400000);      // до Пасхи ЦЬОГО року
+  const info = { days, toCur, special: null, glas: null };
+  if (toCur === 0)       info.special = 'Пасха';
+  else if (toCur === -7) info.special = 'Вхід Господній в Єрусалим';
+  else if (days === 39)  info.special = 'Вознесіння Господнє';
+  else if (days === 49)  info.special = 'П’ятидесятниця';
+  if (days > 0 && days < 7) info.special = 'Світла седмиця';
+  if (days >= 7){
+    const week = Math.floor((days - dt.getUTCDay()) / 7);  // неділя цього тижня
+    info.glas = ((week - 1) % 8) + 1;
+  }
+  return info;
+}
+
+const DOW_UA = ['Неділя','Понеділок','Вівторок','Середа','Четвер','П’ятниця','Субота'];
+const MON_UA = ['січня','лютого','березня','квітня','травня','червня','липня',
+                'серпня','вересня','жовтня','листопада','грудня'];
+let sohodniISO = null;   // обрана дата живе, поки відкритий додаток
+
+function renderSohodniBody(){
+  const body = document.getElementById('refBody');
+  body.innerHTML = '';
+  const intro = document.createElement('div');
+  intro.className = 'ref-hint';
+  intro.innerHTML = 'Проба рушія «М»: обери дату — побачиш день тижня, глас і те, що є в наших довідниках на цей день. Це підбір з карток (39 свят), не повні богослужбові вказівки.';
+  body.appendChild(intro);
+
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:10px;margin:8px 0 4px;';
+  const lbl = document.createElement('span');
+  lbl.className = 'ref-row-lbl'; lbl.textContent = 'Дата:';
+  const inp = document.createElement('input');
+  inp.type = 'date';
+  inp.style.cssText = 'font-size:1.05em;padding:6px 10px;background:#1d2433;color:#e8e2d2;border:1px solid #3a4357;border-radius:8px;color-scheme:dark;';
+  if (!sohodniISO){
+    const now = new Date();
+    sohodniISO = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  }
+  inp.value = sohodniISO;
+  inp.onchange = () => { if (inp.value){ sohodniISO = inp.value; buildSohodni(); } };
+  row.appendChild(lbl); row.appendChild(inp);
+  body.appendChild(row);
+
+  const out = document.createElement('div');
+  out.id = 'sohodniOut';
+  body.appendChild(out);
+  buildSohodni();
+}
+
+function buildSohodni(){
+  const out = document.getElementById('sohodniOut');
+  if (!out) return;
+  out.innerHTML = '';
+  const [y, m, d] = sohodniISO.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const dow = dt.getUTCDay();
+  const info = dayInfo(dt);
+
+  // Шапка: «Неділя, 14 червня 2026 · Глас 2»
+  const head = document.createElement('div');
+  head.className = 'ref-feast-sec';
+  let title = DOW_UA[dow] + ', ' + d + ' ' + MON_UA[m - 1] + ' ' + y;
+  if (info.glas) title += ' · Глас ' + info.glas;
+  head.textContent = title;
+  out.appendChild(head);
+
+  const note = (txt) => {
+    const n = document.createElement('div');
+    n.className = 'ref-hint'; n.textContent = txt;
+    out.appendChild(n);
+  };
+  if (info.special === 'Пасха')
+    note('ПАСХА. Служби — у меню «Пасхальні служби».');
+  else if (info.special === 'Світла седмиця')
+    note('Світла седмиця: служба пасхальним чином, глас змінюється щодня.');
+
+  // Свята цього дня: нерухомі за date "MM-DD" + рухомі від Пасхи
+  const FF = (typeof FEASTS !== 'undefined') ? FEASTS : [];
+  const mmdd = String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+  const todays = FF.filter(f => f.date === mmdd);
+  if (info.special && info.special !== 'Пасха' && info.special !== 'Світла седмиця'){
+    const mv = FF.find(f => f.name === info.special);
+    if (mv) todays.unshift(mv);
+  }
+  if (todays.length){
+    todays.forEach(f => {
+      const card = makeFeastCard(f);
+      if (todays.length === 1) card.open = true;   // одне свято — одразу розгорнуте
+      out.appendChild(card);
+    });
+  } else if (!info.special){
+    note('Свят із наших карток на цю дату немає (у словнику поки 39 свят; повний місяцеслов — попереду).');
+  }
+
+  // Незмінне тижня: неділя → картка гласу (Октоїх), будень → денні
+  const addRow = (det, label, text) => {
+    if (!text) return;
+    const r = document.createElement('div'); r.className = 'ref-row';
+    const l = document.createElement('div'); l.className = 'ref-row-lbl'; l.textContent = label;
+    const t = document.createElement('div'); t.className = 'ref-row-txt'; t.textContent = text;
+    r.appendChild(l); r.appendChild(t); det.appendChild(r);
+  };
+  const mkDet = (titleTxt) => {
+    const det = document.createElement('details');
+    det.className = 'ref-feast';
+    det.addEventListener('toggle', updateStickyClose);
+    const sum = document.createElement('summary');
+    const nm = document.createElement('div');
+    nm.className = 'feast-name'; nm.textContent = titleTxt;
+    sum.appendChild(nm); det.appendChild(sum);
+    return det;
+  };
+  const mkClose = (det, titleTxt) => {
+    const close = document.createElement('div');
+    close.className = 'fold-close-plain';
+    close.innerHTML = titleTxt + foldAct('— згорнути ↑');
+    close.onclick = () => { det.open = false; };
+    det.appendChild(close);
+  };
+
+  if (dow === 0 && info.glas){
+    const g = (typeof GLASI !== 'undefined') ? GLASI.find(x => x.glas === info.glas) : null;
+    if (g){
+      const t = 'Недільне, глас ' + g.glas + ' (Октоїх)';
+      const det = mkDet(t);
+      addRow(det, 'Тропар', g.tropar);
+      addRow(det, 'Кондак', g.kondak);
+      addRow(det, 'Богородичний', g.bohorodychen);
+      appendProkBlock(det, { label: 'Прокимен (на Літургії)', text: g.prok, stih: g.prokStih });
+      appendProkBlock(det, { label: 'Алилуя', text: g.alleluia, stih: g.alleluiaStih });
+      addRow(det, 'Причасний', (typeof SUNDAY_PRYCHASEN !== 'undefined' ? SUNDAY_PRYCHASEN : ''));
+      mkClose(det, t);
+      out.appendChild(det);
+    }
+  } else if (dow !== 0){
+    const dd = (typeof DENNI !== 'undefined') ? DENNI.find(x => x.day === DOW_UA[dow]) : null;
+    if (dd){
+      const t = 'Денне — ' + dd.day;
+      const det = mkDet(t);
+      if (typeof VSEDENNI_ANTYFONY !== 'undefined')
+        det.appendChild(buildAntyfony(VSEDENNI_ANTYFONY, 'Антифони вседенні ▾', null));
+      addRow(det, 'Тропар', dd.tropar);
+      addRow(det, 'Інший тропар', dd.troparAlt);
+      addRow(det, 'Кондак', dd.kondak);
+      addRow(det, 'Другий кондак', dd.kondakAlt);
+      (dd.rows || []).forEach(r => appendProkBlock(det, r));
+      mkClose(det, t);
+      out.appendChild(det);
+    }
+  }
+}
+function openSohodniRef(){
+  openRefPage('Сьогодні — підбір за датою', renderSohodniBody);
 }
 
 // Загальні святим ЗА ЧИНОМ — словник ZAHALNI. Кожен чин = акордеон.
