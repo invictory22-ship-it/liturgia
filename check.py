@@ -84,7 +84,25 @@ if dtxt is not None:
     except json.JSONDecodeError as e:
         errors.append('data-dovidnyk.js: ПОМИЛКА JSON (мабуть зайва/відсутня кома) - рядок %d' % e.lineno)
 
-# 3) index.html — баланс дужок у script (повний прохід зі станами рядків)
+# 3) data-vkazivky-РІК.js — богослужбові вказівки по днях (необов'язкові, річні файли)
+import glob
+for vf in glob.glob('data-vkazivky-*.js'):
+    vtxt = load(vf)
+    if vtxt is None:
+        continue
+    try:
+        mv = re.search(r'const VKAZIVKY_\d+ = (\[[\s\S]*\n\]);', vtxt)
+        if not mv:
+            errors.append('%s: не знайдено const VKAZIVKY_РІК = [...]' % vf)
+        else:
+            days = json.loads(mv.group(1))
+            for i, d in enumerate(days):
+                if 'date' not in d or 'sections' not in d:
+                    errors.append('%s: день #%d без date/sections' % (vf, i)); break
+    except json.JSONDecodeError as e:
+        errors.append('%s: ПОМИЛКА JSON - рядок %d' % (vf, e.lineno))
+
+# 4) index.html — баланс дужок у script (повний прохід зі станами рядків)
 try:
     h = open('index.html', encoding='utf-8').read()
     js = ''.join(re.findall(r'<script>(.*?)</script>', h, re.S))
