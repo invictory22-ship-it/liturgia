@@ -596,7 +596,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=85"></script>
+<script src="liturgy-data.js?v=86"></script>
 <script src="data-dovidnyk.js?v=84"></script>
 <script>
 
@@ -731,6 +731,32 @@ function applySolo(block){
   }
   return b;
 }
+
+// Розгортання посилань { t:"include", id } з бібліотеки FRAGMENTS (єдине джерело
+// ектеній). Виконується один раз при завантаженні, до першого render. Глибока копія,
+// щоб служби не ділили стан (open тощо). vars — підстановка {{ключ}} у тексті фрагмента
+// (знадобиться для вечірні/ранньої: «Доповнімо {{час}}молитву нашу…»).
+function expandIncludes(arr){
+  const out = [];
+  for (const b of arr){
+    if (b && b.t === 'include'){
+      const frag = (typeof FRAGMENTS !== 'undefined') ? FRAGMENTS[b.id] : null;
+      if (!frag){ console.error('Невідомий фрагмент: ' + b.id); continue; }
+      let copy = JSON.parse(JSON.stringify(frag));
+      if (b.vars) for (const [k, v] of Object.entries(b.vars))
+        copy = JSON.parse(JSON.stringify(copy).split('{{' + k + '}}').join(v));
+      out.push(...expandIncludes(copy));
+    } else if (b && b.t === 'fold' && Array.isArray(b.blocks)){
+      const c = Object.assign({}, b);
+      c.blocks = expandIncludes(b.blocks);
+      out.push(c);
+    } else out.push(b);
+  }
+  return out;
+}
+function expandInPlace(arr){ const e = expandIncludes(arr); arr.length = 0; e.forEach(x => arr.push(x)); }
+if (typeof FRAGMENTS !== 'undefined' && typeof SERVICES !== 'undefined')
+  SERVICES.forEach(s => expandInPlace(s.blocks));
 
 // Активна служба (головна Літургія за замовч.); меню перемикає на пасхальні тощо.
 let activeBlocks = (typeof BLOCKS !== 'undefined') ? BLOCKS : [];

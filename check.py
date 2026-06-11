@@ -17,16 +17,29 @@ def find_const(txt, name):
     m = re.search(r'const %s = (\[[\s\S]*?\n\]);' % name, txt)
     return m.group(1) if m else None
 
+FRAG_IDS = set()  # заповнюється з const FRAGMENTS
+
+def check_block(fname, name, i, b):
+    """Один блок: include мусить мати відомий id, решта — t і text."""
+    if b.get('t') == 'include':
+        if b.get('id') not in FRAG_IDS:
+            errors.append('%s: %s блок #%d — include з невідомим id %r' % (fname, name, i, b.get('id')))
+            return False
+        return True
+    if 't' not in b or 'text' not in b:
+        errors.append('%s: %s блок #%d без t/text' % (fname, name, i))
+        return False
+    return True
+
 def check_blocks_array(fname, txt, name, required=False):
-    """Масив блоків служби: кожен елемент має t і text."""
+    """Масив блоків служби: кожен елемент має t і text (або include з відомим id)."""
     src = find_const(txt, name)
     if src is None:
         if required:
             errors.append('%s: не знайдено const %s = [...]' % (fname, name))
         return
     for i, b in enumerate(json.loads(src)):
-        if 't' not in b or 'text' not in b:
-            errors.append('%s: %s блок #%d без t/text' % (fname, name, i))
+        if not check_block(fname, name, i, b):
             break
 
 def check_records(fname, txt, name, fields):
@@ -39,10 +52,19 @@ def check_records(fname, txt, name, fields):
             errors.append('%s: %s #%d без %s' % (fname, name, i, '/'.join(fields)))
             break
 
-# 1) liturgy-data.js — служби (BLOCKS обов'язковий, PASKY/PASKHA_LITURGY якщо є)
+# 1) liturgy-data.js — фрагменти + служби (BLOCKS обов'язковий, PASKY/PASKHA_LITURGY якщо є)
 txt = load('liturgy-data.js')
 if txt is not None:
     try:
+        # FRAGMENTS — бібліотека ектеній: валідний JSON-об'єкт, кожен блок має t/text
+        mfr = re.search(r'const FRAGMENTS = (\{[\s\S]*?\n\});', txt)
+        if mfr:
+            fragments = json.loads(mfr.group(1))
+            FRAG_IDS.update(fragments.keys())
+            for fid, blocks in fragments.items():
+                for i, b in enumerate(blocks):
+                    if not check_block('liturgy-data.js', 'FRAGMENTS[%s]' % fid, i, b):
+                        break
         check_blocks_array('liturgy-data.js', txt, 'BLOCKS', required=True)
         for name in ('PASKY', 'PASKHA_LITURGY'):
             check_blocks_array('liturgy-data.js', txt, name)
