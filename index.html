@@ -530,6 +530,7 @@
   .vkaz-read-lbl { color: var(--feast-meta); font-size: 11.5px; text-transform: uppercase;
     letter-spacing: .04em; margin-bottom: 3px; }
   .vkaz-read .r { color: #84b3ec; font-size: 14px; line-height: 1.55; margin-bottom: 4px; }
+  .vkaz-read .rl { color: var(--gold-text); font-weight: 600; }   /* позначка-дороговказ (служба/чин) */
   .vkaz-notes { font-style: italic; color: var(--feast-meta); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
   .vkaz-banner { background: rgba(125,95,180,.14); border-radius: 8px; padding: 8px 11px;
     color: var(--feast-name); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
@@ -2513,6 +2514,17 @@ const VKAZ_RUBRICS = ['Примітка','Примітки','Варіанти','
 // межу слова даємо lookahead-ом (JS \b не розуміє кирилиці)
 const VKAZ_RE = new RegExp('(^|[.»–]\\s+)(' + VKAZ_RUBRICS.join('|') + ')(?=[\\s.,:;»–)]|$)', 'g');
 function vkazEsc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Рядок зачал: позначку-дороговказ (служба «Ран./Літ./На N часі –» або чин святого
+// «Свт.:/Прп.:/Суботи перед…:») фарбуємо золотом, саме посилання лишається синім.
+// Посилання мають цифри/«зач.» — їх відсіюємо, тож під фарбу йдуть лише позначки.
+function vkazReadHTML(r){
+  let s = vkazEsc(r)
+    .replace(/^(Ран\.|Літ\.|Утр\.|Веч\.|На [^–]{1,14}часі|Під час освячення води)(\s+–\s+)/,
+             '<span class="rl">$1</span>$2')
+    .replace(/(^|–\s)([А-ЯІЇЄҐа-яіїєґ][^:–]{2,40}?:)(?=\s)/g,
+             (m, p, lbl) => /зач|\d/.test(lbl) ? m : p + '<span class="rl">' + lbl + '</span>');
+  return s.replace(/\.\s+((?:Мф|Мк|Лк|Ін)\.,\s)/, '.<br>$1');   // Євангеліє — з нового рядка
+}
 // Жирні рубрики + АБЗАЦИ: кожна рубрика починає новий блок-абзац (\x02 — роздільник).
 function vkazBold(text){
   const html = vkazEsc(text).replace(VKAZ_RE, (m, p, r) => (p ? p.replace(/\s+$/, '') + '\x02' : '') + '<b>' + r + '</b>');
@@ -2651,8 +2663,7 @@ function buildSohodni(){
       rl.textContent = 'Зачала (читання)'; rb.appendChild(rl);
       vrec.readings.forEach(r => {
         const rr = document.createElement('div'); rr.className = 'r';
-        // Євангеліє — з нового рядка (просто, без відступу — щоб довгі рядки не з'їжджали)
-        rr.innerHTML = vkazEsc(r).replace(/\.\s+((?:Мф|Мк|Лк|Ін)\.,\s)/, '.<br>$1');
+        rr.innerHTML = vkazReadHTML(r);   // позначка золотом, посилання синім; Євангеліє з нового рядка
         rb.appendChild(rr);
       });
       vbody.appendChild(rb);
