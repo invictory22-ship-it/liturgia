@@ -594,7 +594,7 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-data.js?v=81"></script>
+<script src="liturgy-data.js?v=82"></script>
 <script>
 
 let recognition = null, isListening = false;
@@ -1787,32 +1787,8 @@ function renderYearBody(){
     //    задостойник → причасний → відпуст)
     addSec('На Літургії', 'lit');
     // Антифони свята — згортний блок (лише великі Господські)
-    if (Array.isArray(f.antyfony)){
-      const wrap = document.createElement('div'); wrap.className = 'ref-ant';
-      const head = document.createElement('div'); head.className = 'ref-ant-head';
-      head.textContent = 'Антифони свята';
-      const body = document.createElement('div'); body.className = 'ref-ant-body';
-      head.addEventListener('click', () => wrap.classList.toggle('open'));
-      const EDYNORODNYJ = 'Єдинородний Сину і Слово Боже, безсмертний єси, Ти зволив ради нашого спасіння воплотитися від Святої Богородиці і Приснодіви Марії, незмінно ставши людиною; розп’ятий же, Христе Боже, смертю смерть подолав, єдиний Ти зі Святої Тройці, прославлюваний з Отцем і Святим Духом, спаси нас.';
-      f.antyfony.forEach((ant, i) => {
-        const grp = document.createElement('div'); grp.className = 'ref-ant-grp';
-        const gStih = (t) => { const d = document.createElement('div'); d.className = 'ref-ant-stih'; d.textContent = t; grp.appendChild(d); };
-        const gPr = (t) => { const d = document.createElement('div'); d.className = 'ref-ant-pr'; d.textContent = t; grp.appendChild(d); };
-        const al = document.createElement('div'); al.className = 'ref-ant-lbl'; al.textContent = ant.label; grp.appendChild(al);
-        // приспів Антифону 3 = тропар свята (підставляємо повний текст із f.tropar)
-        const prFull = (ant.pryspiv === 'тропар свята' && f.tropar) ? f.tropar.text : ant.pryspiv;
-        (ant.stychy || []).forEach((s, j) => {
-          gStih('Стих ' + (j + 1) + ': ' + s);
-          if (prFull) gPr(j === 0 ? ('Приспів: ' + prFull) : 'Приспів той самий.');
-        });
-        // кінцівка антифону: «Слава: І нині:» + повтор приспіву; після Ант. 2 — «Єдинородний Сину»
-        if (i === 0 && prFull){ gStih('Слава: І нині:'); gPr('Приспів той самий.'); }
-        if (i === 1){ gStih('Слава: І нині:'); gPr(EDYNORODNYJ); }
-        body.appendChild(grp);
-      });
-      wrap.appendChild(head); wrap.appendChild(body);
-      det.appendChild(wrap);
-    }
+    if (Array.isArray(f.antyfony))
+      det.appendChild(buildAntyfony(f.antyfony, 'Антифони свята', f.tropar));
     addRow('Вхідне', f.vhidne);
     // Тропар/кондак: кілька празнувань (f.hymns=[{label,tropar,kondak}]) або одне свято
     if (Array.isArray(f.hymns)){
@@ -1985,6 +1961,34 @@ function openDenniRef(){
   openRefPage('Прокимни, алилуї, причасні денні (за днями тижня)', renderDenniBody);
 }
 
+// Спільний рендер антифонів (святкові й вседенні): {label, pryspiv, stychy[]}.
+// Якщо pryspiv === 'тропар свята' і передано tropar — підставляє повний тропар.
+function buildAntyfony(antyfony, headLabel, tropar){
+  const wrap = document.createElement('div'); wrap.className = 'ref-ant';
+  const head = document.createElement('div'); head.className = 'ref-ant-head';
+  head.textContent = headLabel;
+  const body = document.createElement('div'); body.className = 'ref-ant-body';
+  head.addEventListener('click', () => wrap.classList.toggle('open'));
+  const EDYNORODNYJ = 'Єдинородний Сину і Слово Боже, безсмертний єси, Ти зволив ради нашого спасіння воплотитися від Святої Богородиці і Приснодіви Марії, незмінно ставши людиною; розп’ятий же, Христе Боже, смертю смерть подолав, єдиний Ти зі Святої Тройці, прославлюваний з Отцем і Святим Духом, спаси нас.';
+  antyfony.forEach((ant, i) => {
+    const grp = document.createElement('div'); grp.className = 'ref-ant-grp';
+    const gStih = (t) => { const d = document.createElement('div'); d.className = 'ref-ant-stih'; d.textContent = t; grp.appendChild(d); };
+    const gPr = (t) => { const d = document.createElement('div'); d.className = 'ref-ant-pr'; d.textContent = t; grp.appendChild(d); };
+    const al = document.createElement('div'); al.className = 'ref-ant-lbl'; al.textContent = ant.label; grp.appendChild(al);
+    const prFull = (ant.pryspiv === 'тропар свята' && tropar) ? tropar.text : ant.pryspiv;
+    (ant.stychy || []).forEach((s, j) => {
+      gStih('Стих ' + (j + 1) + ': ' + s);
+      if (prFull) gPr(j === 0 ? ('Приспів: ' + prFull) : 'Приспів той самий.');
+    });
+    // кінцівка: «Слава: І нині:» + повтор приспіву; після Ант. 2 — «Єдинородний Сину»
+    if (i === 0 && prFull){ gStih('Слава: І нині:'); gPr('Приспів той самий.'); }
+    if (i === 1){ gStih('Слава: І нині:'); gPr(EDYNORODNYJ); }
+    body.appendChild(grp);
+  });
+  wrap.appendChild(head); wrap.appendChild(body);
+  return wrap;
+}
+
 // ТИЖДЕНЬ — об'єднана сторінка: Неділя (за гласом, GLASI) + Будні Пн–Сб (DENNI).
 function renderTyzhdenBody(){
   const body = document.getElementById('refBody');
@@ -2047,6 +2051,9 @@ function renderTyzhdenBody(){
   body.appendChild(ned);
 
   // БУДНІ — Пн–Сб (тропар, кондак, прокимен, алилуарій, причасний)
+  // Вседенні антифони (однакові щодня, Пс 91/92/94) — окремий згортний блок над днями
+  if (typeof VSEDENNI_ANTYFONY !== 'undefined')
+    body.appendChild(buildAntyfony(VSEDENNI_ANTYFONY, 'Антифони вседенні (будні) ▾', null));
   const DD = (typeof DENNI !== 'undefined') ? DENNI : [];
   DD.forEach(d => {
     const det = mkDet(d.day);
