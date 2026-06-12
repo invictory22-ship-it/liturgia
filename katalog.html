@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Каталог комори — усі банки</title>
+<style>
+  :root{ --bg:#14120d; --panel:#1d1a14; --panel2:#252016; --gold:#e7c587;
+         --goldd:#c9a96a; --txt:#ddd6c6; --muted:#928d85; --line:#3a3326; --green:#7fcf9f; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--txt);
+        font-family:-apple-system,Segoe UI,Roboto,sans-serif; line-height:1.5; padding:16px; }
+  .wrap{ max-width:820px; margin:0 auto; }
+  h1{ color:var(--gold); font-size:22px; text-align:center; margin:4px 0 2px; }
+  .sub{ text-align:center; color:var(--muted); margin:0 0 16px; font-size:14px; }
+  .searchbar{ position:sticky; top:0; background:var(--bg); padding:8px 0 10px; z-index:5; }
+  #q{ width:100%; padding:12px 14px; font-size:16px; border-radius:10px;
+      border:1px solid var(--goldd); background:var(--panel2); color:var(--txt); }
+  #q::placeholder{ color:var(--muted); }
+  .count{ text-align:center; color:var(--muted); font-size:13px; margin:4px 0 12px; }
+  .shelf-h{ color:var(--gold); font-size:17px; margin:22px 0 8px; border-bottom:1px solid var(--line); padding-bottom:5px; }
+  .jar{ background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--goldd);
+        border-radius:9px; padding:10px 13px; margin:7px 0; }
+  .jar .nm{ color:var(--gold); font-weight:700; font-size:15.5px; }
+  .jar .id{ color:var(--muted); font-family:ui-monospace,monospace; font-size:12.5px; margin-left:6px; }
+  .jar .tx{ color:var(--txt); font-size:14px; margin-top:4px; opacity:.92; }
+  .jar .meta{ margin-top:5px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .tag{ background:rgba(125,95,180,.16); color:var(--gold); font-size:11.5px;
+        border-radius:20px; padding:2px 9px; }
+  .cnt{ color:var(--muted); font-size:11.5px; }
+  .no-meta{ border-left-color:var(--muted); }
+  .no-meta .nm{ color:var(--txt); }
+  .hint{ color:var(--muted); font-size:11.5px; font-style:italic; }
+  .empty{ text-align:center; color:var(--muted); padding:30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🫙 Каталог комори</h1>
+  <p class="sub">Усі банки (фрагменти) — те, що береться в служби за посиланням. Пошук за назвою, тегом, текстом або кодом.</p>
+  <div class="searchbar">
+    <input id="q" type="search" placeholder="Пошук: отче · ектенія · пасха · хор · благальна…" autocomplete="off">
+  </div>
+  <div class="count" id="count"></div>
+  <div id="out"></div>
+</div>
+
+<script src="liturgy-fragments.js"></script>
+<script src="fragments-catalog.js"></script>
+<script>
+  const SHELVES = [
+    ['ektenia','Ектенії'], ['vyholos','Виголоси'], ['molytva','Тихі молитви'],
+    ['spiv','Постійні піснеспіви'], ['stihyry','Стихири'], ['','Інше']
+  ];
+  const META = (typeof FRAG_META !== 'undefined') ? FRAG_META : {};
+
+  function firstText(blocks){
+    for (const b of blocks){
+      if (b.t === 'include') return '↪ набір/банка: ' + b.id;
+      if (b.text) return b.text;
+      if (Array.isArray(b.blocks)){ const x = firstText(b.blocks); if (x) return x; }
+    }
+    return '';
+  }
+  function countBlocks(blocks){
+    let n = 0;
+    for (const b of blocks){ if (Array.isArray(b.blocks)) n += countBlocks(b.blocks); else n++; }
+    return n;
+  }
+  function shelfOf(id){
+    const p = id.split('-')[0];
+    return SHELVES.some(s => s[0] === p) ? p : '';
+  }
+
+  const ALL = Object.keys(typeof FRAGMENTS !== 'undefined' ? FRAGMENTS : {}).map(id => {
+    const m = META[id] || {};
+    const tx = firstText(FRAGMENTS[id]);
+    return {
+      id, nazva: m.nazva || '', tags: m.tags || [], synonyms: m.synonyms || [],
+      text: tx, n: countBlocks(FRAGMENTS[id]), shelf: shelfOf(id),
+      hay: (id + ' ' + (m.nazva||'') + ' ' + (m.tags||[]).join(' ') + ' ' + (m.synonyms||[]).join(' ') + ' ' + tx).toLowerCase()
+    };
+  });
+
+  function render(filter){
+    const f = (filter||'').trim().toLowerCase();
+    const list = f ? ALL.filter(j => j.hay.includes(f)) : ALL;
+    const out = document.getElementById('out');
+    out.innerHTML = '';
+    document.getElementById('count').textContent =
+      (f ? list.length + ' з ' + ALL.length : ALL.length + ' банок') + ' · підписано: ' + ALL.filter(j=>j.nazva).length;
+    if (!list.length){ out.innerHTML = '<div class="empty">Нічого не знайдено за «' + filter + '»</div>'; return; }
+    for (const [pref, title] of SHELVES){
+      const items = list.filter(j => j.shelf === pref);
+      if (!items.length) continue;
+      const h = document.createElement('div'); h.className = 'shelf-h';
+      h.textContent = title + ' (' + items.length + ')'; out.appendChild(h);
+      for (const j of items){
+        const d = document.createElement('div'); d.className = 'jar' + (j.nazva ? '' : ' no-meta');
+        const nm = document.createElement('div');
+        nm.innerHTML = '<span class="nm">' + (j.nazva || j.id) + '</span>' +
+                       (j.nazva ? '<span class="id">' + j.id + '</span>' : '');
+        d.appendChild(nm);
+        const tx = document.createElement('div'); tx.className = 'tx'; tx.textContent = j.text || '—'; d.appendChild(tx);
+        const meta = document.createElement('div'); meta.className = 'meta';
+        j.tags.forEach(t => { const s = document.createElement('span'); s.className = 'tag'; s.textContent = t; meta.appendChild(s); });
+        const c = document.createElement('span'); c.className = 'cnt'; c.textContent = j.n + ' бл.'; meta.appendChild(c);
+        if (!j.nazva){ const hh = document.createElement('span'); hh.className = 'hint'; hh.textContent = '· підпис ще не задано'; meta.appendChild(hh); }
+        d.appendChild(meta);
+        out.appendChild(d);
+      }
+    }
+  }
+
+  document.getElementById('q').addEventListener('input', e => render(e.target.value));
+  render('');
+</script>
+</body>
+</html>
