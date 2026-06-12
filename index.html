@@ -538,6 +538,7 @@
   .vkaz-text b { color: var(--feast-name); font-weight: 600; }
   .vkaz-hram { color: var(--feast-name); font-weight: 600; }   /* дороговказ за типом храму — як сусідні рубрики */
   .vkaz-note { color: #928d85; }   /* допоміжні примітки в зачалах: (від половини), (за вівторок) тощо */
+  .vkaz-chin { color: #e8956a; font-weight: 600; }   /* чин Літургії (Золотоустого / Василія Великого) — кораловий, щоб не сплутати з іменами святих */
   .vkaz-text .vp { display: block; margin: 0 0 6px; }   /* абзац на кожну рубрику */
   .vkaz-text .vp:last-child { margin-bottom: 0; }
   .vkaz-plain-lbl { font-weight: 600; color: var(--gold-text); font-size: 14px; margin: 11px 0 2px; }
@@ -2525,6 +2526,11 @@ const VKAZ_RE = new RegExp('(^|[.»–]\\s+)(' + VKAZ_RUBRICS.join('|') + ')(?=[
 function vkazEsc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 // Дороговкази «У храмі …» (тип храму) — підсвічуємо для швидкої навігації.
 const VKAZ_HRAM_RE = /[Уу] храмі (?:святого|Господському і Богородиці|Господньому і Богородиці|Господському|Господньому|Богородиці)/g;
+// Підказка про ЧИН Літургії (Золотоустого / Василія Великого) — кораловим, щоб священник
+// не забув служити правильним чином. Ловимо лише службову вказівку «Літургія … свт. Х» /
+// «за чином свт. Х», а НЕ імена святих у похваленнях («слово свт. Василія» тощо).
+const VKAZ_CHIN_RE = /(?:за чином\s+(?:свт\.|св\.|святителя)?\s*|Літург[іії][яюїіеє][юї]?\s+(?:за чином\s+)?(?:свт\.|св\.|святого|святителя)\s+)(?:Іоан{1,2}а\s+Золотоустого|Василія\s+Великого)/gi;
+const vkazChin = (html) => html.replace(VKAZ_CHIN_RE, '<span class="vkaz-chin">$&</span>');
 // Рядок зачал: позначку-дороговказ (служба «Ран./Літ./На N часі –» або чин святого
 // «Свт.:/Прп.:/Суботи перед…:») фарбуємо золотом, саме посилання лишається синім.
 // Посилання мають цифри/«зач.» — їх відсіюємо, тож під фарбу йдуть лише позначки.
@@ -2540,8 +2546,8 @@ function vkazReadHTML(r){
 // Жирні рубрики + АБЗАЦИ: кожна рубрика починає новий блок-абзац (\x02 — роздільник).
 function vkazBold(text){
   const html = vkazEsc(text).replace(VKAZ_RE, (m, p, r) => (p ? p.replace(/\s+$/, '') + '\x02' : '') + '<b>' + r + '</b>');
-  return html.split('\x02').map(s => '<span class="vp">' + s.trim() + '</span>').join('')
-    .replace(VKAZ_HRAM_RE, '<span class="vkaz-hram">$&</span>');
+  return vkazChin(html.split('\x02').map(s => '<span class="vp">' + s.trim() + '</span>').join('')
+    .replace(VKAZ_HRAM_RE, '<span class="vkaz-hram">$&</span>'));
 }
 
 let _vkazInjected = false;
@@ -2549,7 +2555,7 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=94';
+  s.src = 'data-vkazivky-2026.js?v=95';
   s.onload = () => { if (document.getElementById('sohodniOut')) buildSohodni(); };
   document.head.appendChild(s);
 }
@@ -2682,7 +2688,7 @@ function buildSohodni(){
       vbody.appendChild(rb);
     }
     if (vrec.notes){
-      const nn = document.createElement('div'); nn.className = 'vkaz-notes'; nn.textContent = vrec.notes;
+      const nn = document.createElement('div'); nn.className = 'vkaz-notes'; nn.innerHTML = vkazChin(vkazEsc(vrec.notes));
       vbody.appendChild(nn);
     }
     if (vrec.special){
