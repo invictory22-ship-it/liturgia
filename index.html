@@ -667,9 +667,9 @@
   <div class="status-row"><span class="status" id="status">Натисніть «Почати» і дозвольте доступ до мікрофона.</span><span class="heard" id="heard"></span></div>
 </div>
 
-<script src="liturgy-fragments.js?v=92"></script>
-<script src="liturgy-data.js?v=92"></script>
-<script src="svc-pascha.js?v=92"></script>
+<script src="liturgy-fragments.js?v=93"></script>
+<script src="liturgy-data.js?v=93"></script>
+<script src="svc-pascha.js?v=93"></script>
 <script src="data-dovidnyk.js?v=87"></script>
 <script>
 
@@ -794,6 +794,8 @@ function isTracked(block){
 // soloText — окремий текст для соло-режиму (показується замість text).
 // Повертає блок для показу або null (сховати). У звичайному режимі — без змін.
 function applySolo(block){
+  // only:"monastery" — блок показуємо лише коли в налаштуваннях вибрано монастир
+  if(block.only === 'monastery' && community !== 'monastery') return null;
   if(!soloMode) return block;
   if(block.solo === 'hide') return null;
   let b = block;
