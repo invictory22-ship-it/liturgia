@@ -534,6 +534,10 @@
   .vkaz-notes { font-style: italic; color: var(--feast-meta); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
   .vkaz-banner { background: rgba(125,95,180,.14); border-radius: 8px; padding: 8px 11px;
     color: var(--feast-name); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
+  .vkaz-svclinks { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+  .vkaz-svcbtn { background: rgba(231,197,135,.14); border: 1px solid var(--goldd, #c9a96a);
+    color: var(--gold, #e7c587); font-size: 13px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  .vkaz-svcbtn:hover { background: rgba(231,197,135,.26); }
   .vkaz-text { color: var(--feast-txt); font-size: 14.5px; line-height: 1.6; margin: 4px 0 2px; padding: 0 4px; }
   .vkaz-text b { color: var(--feast-name); font-weight: 600; }
   .vkaz-hram { color: var(--feast-name); font-weight: 600; }   /* дороговказ за типом храму — як сусідні рубрики */
@@ -2501,6 +2505,7 @@ const SVC_LABEL = {
   'ВЕЛИКІЙ ВЕЧІРНІ': 'На великій вечірні', 'МАЛІЙ ВЕЧІРНІ': 'На малій вечірні',
   'ВЕЧІРНІ': 'На вечірні', 'ПОВСЯКДЕННІЙ ВЕЧІРНІ': 'На повсякденній вечірні',
   'ВЕЧІРНІ ІЗ ЛІТУРГІЄЮ': 'На вечірні з Літургією', 'РАННІЙ': 'На ранній',
+  'ВЕЛИКА ВЕЧІРНЯ': 'На великій вечірні',
   'УТРЕНІ': 'На утрені', 'ЧАСАХ': 'На часах', 'ЛІТУРГІЇ': 'На Літургії',
   'ЗОБРАЖАЛЬНИХ': 'На зображальних', 'МАЛОМУ ПОВЕЧІР’Ї': 'На малому повечір’ї',
   'ВЕЛИКОМУ ПОВЕЧІР’Ї': 'На великому повечір’ї', 'ПОВЕЧІР’Ї': 'На повечір’ї',
@@ -2511,7 +2516,8 @@ const SVC_LABEL = {
 // довгі служби → золотий вкладений акордеон; короткі (часи/літургія) → просто текст
 const SVC_GOLD = new Set(['ВЕЛИКІЙ ВЕЧІРНІ','МАЛІЙ ВЕЧІРНІ','ВЕЧІРНІ','ПОВСЯКДЕННІЙ ВЕЧІРНІ',
   'ВЕЧІРНІ ІЗ ЛІТУРГІЄЮ','РАННІЙ','УТРЕНІ','ВЕЛИКОМУ ПОВЕЧІР’Ї','МАЛОМУ ПОВЕЧІР’Ї',
-  'ПОВЕЧІР’Ї','ПОЛУНОШНИЦІ','ГРЕЦЬКИЙ УСТАВ','РАННЯ','ЧАСИ','ВЕЛИКЕ ПОВЕЧІР’Я','ВЕЧІРНЯ','ПОВЕЧІР’Я']);
+  'ПОВЕЧІР’Ї','ПОЛУНОШНИЦІ','ГРЕЦЬКИЙ УСТАВ','РАННЯ','ЧАСИ','ВЕЛИКЕ ПОВЕЧІР’Я','ВЕЧІРНЯ','ПОВЕЧІР’Я',
+  'ВЕЛИКА ВЕЧІРНЯ']);
 
 // Рубрики — типові початки вказівок; жирним лише на початку речення (після . » – або з краю).
 const VKAZ_RUBRICS = ['Примітка','Примітки','Варіанти','Перший варіант','Другий варіант',
@@ -2561,7 +2567,7 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=97';
+  s.src = 'data-vkazivky-2026.js?v=98';
   s.onload = () => { if (document.getElementById('sohodniOut')) buildSohodni(); };
   document.head.appendChild(s);
 }
@@ -2699,11 +2705,6 @@ function buildSohodni(){
       const nn = document.createElement('div'); nn.className = 'vkaz-notes'; nn.innerHTML = vkazChin(vkazEsc(vrec.notes));
       vbody.appendChild(nn);
     }
-    if (vrec.special){
-      const bn = document.createElement('div'); bn.className = 'vkaz-banner';
-      bn.textContent = 'Особливий день (Страсний тиждень / Пасха / Благовіщення). Повний чин — у друкованому виданні вказівок; пасхальні служби — у меню додатка.';
-      vbody.appendChild(bn);
-    }
     (vrec.sections || []).forEach(sec => {
       const label = SVC_LABEL[sec.svc] || sec.svc;
       const body = sec.text.replace(new RegExp('^(НА|На)\\s+' + sec.svc + '\\s*'), '');
@@ -2717,6 +2718,18 @@ function buildSohodni(){
         vbody.appendChild(l); vbody.appendChild(p);
       }
     });
+    // Пасха / особливий день: відсилка до повних служб — ПІД розрізаними секціями
+    if (vrec.special){
+      const bn = document.createElement('div'); bn.className = 'vkaz-banner';
+      bn.textContent = 'Повні пасхальні служби з голосовим трекінгом — у додатку:';
+      const row = document.createElement('div'); row.className = 'vkaz-svclinks';
+      [['pascha-rannya','Пасхальна рання'],['pascha-liturgy','Пасхальна Літургія'],['pasky','Освячення пасок']]
+        .forEach(([id, nm]) => {
+          const b = document.createElement('button'); b.className = 'vkaz-svcbtn';
+          b.textContent = nm; b.onclick = () => loadService(id); row.appendChild(b);
+        });
+      bn.appendChild(row); vbody.appendChild(bn);
+    }
     vd.appendChild(vbody);
     mkClose(vd, 'Богослужбові вказівки');
     out.appendChild(vd);
