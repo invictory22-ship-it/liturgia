@@ -3,7 +3,7 @@
  - liturgy-data.js і data-dovidnyk.js: валідний JSON (немає зайвих/відсутніх ком),
  - index.html: збалансовані дужки в <script>.
 Викликається git-гачком pre-commit. Якщо щось не так — коміт скасовується."""
-import re, json, sys
+import re, json, sys, glob
 
 errors = []
 
@@ -52,24 +52,44 @@ def check_records(fname, txt, name, fields):
             errors.append('%s: %s #%d без %s' % (fname, name, i, '/'.join(fields)))
             break
 
-# 1) liturgy-data.js — фрагменти + служби (BLOCKS обов'язковий, PASKY/PASKHA_LITURGY якщо є)
-txt = load('liturgy-data.js')
-if txt is not None:
+# 1) Дані служб у кількох файлах. ПОРЯДОК ВАЖЛИВИЙ: спершу FRAGMENTS (заповнює FRAG_IDS),
+#    бо служби містять include, що мусять посилатися на відомий id.
+# 1a) liturgy-fragments.js — бібліотека ектеній (FRAGMENTS) + реєстр служб
+ftxt = load('liturgy-fragments.js')
+if ftxt is not None:
     try:
-        # FRAGMENTS — бібліотека ектеній: валідний JSON-об'єкт, кожен блок має t/text
-        mfr = re.search(r'const FRAGMENTS = (\{[\s\S]*?\n\});', txt)
+        mfr = re.search(r'const FRAGMENTS = (\{[\s\S]*?\n\});', ftxt)
         if mfr:
             fragments = json.loads(mfr.group(1))
             FRAG_IDS.update(fragments.keys())
             for fid, blocks in fragments.items():
                 for i, b in enumerate(blocks):
-                    if not check_block('liturgy-data.js', 'FRAGMENTS[%s]' % fid, i, b):
+                    if not check_block('liturgy-fragments.js', 'FRAGMENTS[%s]' % fid, i, b):
                         break
+        else:
+            errors.append('liturgy-fragments.js: не знайдено const FRAGMENTS = {...}')
+    except json.JSONDecodeError as e:
+        errors.append('liturgy-fragments.js: ПОМИЛКА JSON (мабуть зайва/відсутня кома) - рядок %d' % e.lineno)
+
+# 1b) liturgy-data.js — головна Літургія (BLOCKS обов'язковий)
+txt = load('liturgy-data.js')
+if txt is not None:
+    try:
         check_blocks_array('liturgy-data.js', txt, 'BLOCKS', required=True)
-        for name in ('PASKY', 'PASKHA_LITURGY'):
-            check_blocks_array('liturgy-data.js', txt, name)
     except json.JSONDecodeError as e:
         errors.append('liturgy-data.js: ПОМИЛКА JSON (мабуть зайва/відсутня кома) - рядок %d' % e.lineno)
+
+# 1c) svc-*.js — окремі служби (пасхальні, у майбутньому вечірня/рання/всенічна…).
+#     Кожен const NAME = [...] — масив блоків служби; auto-покриває нові файли.
+for sf in sorted(glob.glob('svc-*.js')):
+    stxt = load(sf)
+    if stxt is None:
+        continue
+    try:
+        for name in re.findall(r'^const (\w+) = \[', stxt, re.M):
+            check_blocks_array(sf, stxt, name)
+    except json.JSONDecodeError as e:
+        errors.append('%s: ПОМИЛКА JSON (мабуть зайва/відсутня кома) - рядок %d' % (sf, e.lineno))
 
 # 2) data-dovidnyk.js — довідник «На весь рік»
 dtxt = load('data-dovidnyk.js')
@@ -85,7 +105,6 @@ if dtxt is not None:
         errors.append('data-dovidnyk.js: ПОМИЛКА JSON (мабуть зайва/відсутня кома) - рядок %d' % e.lineno)
 
 # 3) data-vkazivky-РІК.js — богослужбові вказівки по днях (необов'язкові, річні файли)
-import glob
 for vf in glob.glob('data-vkazivky-*.js'):
     vtxt = load(vf)
     if vtxt is None:
@@ -146,5 +165,5 @@ if errors:
     sys.stderr.write('Виправ помилку (або поклич Claude) і спробуй ще раз.\n\n')
     sys.exit(1)
 
-print('Перевірка OK: liturgy-data.js і data-dovidnyk.js валідні, index.html збалансований.')
+print('Перевірка OK: liturgy-fragments.js, liturgy-data.js, svc-*.js, data-dovidnyk.js валідні, index.html збалансований.')
 sys.exit(0)
