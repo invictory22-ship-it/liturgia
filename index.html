@@ -536,8 +536,8 @@
     color: var(--feast-name); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
   .vkaz-text { color: var(--feast-txt); font-size: 14.5px; line-height: 1.6; margin: 4px 0 2px; padding: 0 4px; }
   .vkaz-text b { color: var(--feast-name); font-weight: 600; }
-  .vkaz-hram { font-weight: 700; color: var(--gold-text);
-    background: rgba(125,95,180,.16); border-radius: 4px; padding: 0 4px; }   /* дороговказ за типом храму */
+  .vkaz-hram { font-weight: 700; color: var(--gold-text); }   /* дороговказ за типом храму */
+  .vkaz-note { color: #928d85; }   /* допоміжні примітки в зачалах: (від половини), (за вівторок) тощо */
   .vkaz-text .vp { display: block; margin: 0 0 6px; }   /* абзац на кожну рубрику */
   .vkaz-text .vp:last-child { margin-bottom: 0; }
   .vkaz-plain-lbl { font-weight: 600; color: var(--gold-text); font-size: 14px; margin: 11px 0 2px; }
@@ -1857,7 +1857,8 @@ function makeFeastCard(f){
       const l = document.createElement('div'); l.className = 'ref-row-lbl'; l.textContent = label;
       row.appendChild(l);
       String(text).split(' · ').forEach(part => {
-        const t = document.createElement('div'); t.className = 'ref-row-txt'; t.textContent = part;
+        const t = document.createElement('div'); t.className = 'ref-row-txt';
+        t.innerHTML = vkazEsc(part).replace(/\([^)]+\)/g, '<span class="vkaz-note">$&</span>');   // примітки (від половини) — приглушено
         row.appendChild(t);
       });
       det.appendChild(row);
@@ -2532,6 +2533,7 @@ function vkazReadHTML(r){
              '<span class="rl">$1</span>$2')
     .replace(/(^|–\s)([А-ЯІЇЄҐа-яіїєґ][^:–]{2,40}?:)(?=\s)/g,
              (m, p, lbl) => /зач|\d/.test(lbl) ? m : p + '<span class="rl">' + lbl + '</span>');
+  s = s.replace(/\([^)]+\)/g, '<span class="vkaz-note">$&</span>');   // примітки (від половини) тощо — приглушено
   return s.replace(/\.\s+((?:Мф|Мк|Лк|Ін)\.,\s)/, '.<br>$1');   // Євангеліє — з нового рядка
 }
 // Жирні рубрики + АБЗАЦИ: кожна рубрика починає новий блок-абзац (\x02 — роздільник).
