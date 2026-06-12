@@ -536,6 +536,8 @@
     color: var(--feast-name); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
   .vkaz-text { color: var(--feast-txt); font-size: 14.5px; line-height: 1.6; margin: 4px 0 2px; padding: 0 4px; }
   .vkaz-text b { color: var(--feast-name); font-weight: 600; }
+  .vkaz-hram { font-weight: 700; color: var(--gold-text);
+    background: rgba(125,95,180,.16); border-radius: 4px; padding: 0 4px; }   /* дороговказ за типом храму */
   .vkaz-text .vp { display: block; margin: 0 0 6px; }   /* абзац на кожну рубрику */
   .vkaz-text .vp:last-child { margin-bottom: 0; }
   .vkaz-plain-lbl { font-weight: 600; color: var(--gold-text); font-size: 14px; margin: 11px 0 2px; }
@@ -2519,6 +2521,8 @@ const VKAZ_RUBRICS = ['Примітка','Примітки','Варіанти','
 // межу слова даємо lookahead-ом (JS \b не розуміє кирилиці)
 const VKAZ_RE = new RegExp('(^|[.»–]\\s+)(' + VKAZ_RUBRICS.join('|') + ')(?=[\\s.,:;»–)]|$)', 'g');
 function vkazEsc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Дороговкази «У храмі …» (тип храму) — підсвічуємо для швидкої навігації.
+const VKAZ_HRAM_RE = /[Уу] храмі (?:святого|Господському|Господньому|Богородиці)/g;
 // Рядок зачал: позначку-дороговказ (служба «Ран./Літ./На N часі –» або чин святого
 // «Свт.:/Прп.:/Суботи перед…:») фарбуємо золотом, саме посилання лишається синім.
 // Посилання мають цифри/«зач.» — їх відсіюємо, тож під фарбу йдуть лише позначки.
@@ -2533,7 +2537,8 @@ function vkazReadHTML(r){
 // Жирні рубрики + АБЗАЦИ: кожна рубрика починає новий блок-абзац (\x02 — роздільник).
 function vkazBold(text){
   const html = vkazEsc(text).replace(VKAZ_RE, (m, p, r) => (p ? p.replace(/\s+$/, '') + '\x02' : '') + '<b>' + r + '</b>');
-  return html.split('\x02').map(s => '<span class="vp">' + s.trim() + '</span>').join('');
+  return html.split('\x02').map(s => '<span class="vp">' + s.trim() + '</span>').join('')
+    .replace(VKAZ_HRAM_RE, '<span class="vkaz-hram">$&</span>');
 }
 
 let _vkazInjected = false;
