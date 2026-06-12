@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Як влаштована бібліотека — на пальцях</title>
+<style>
+  :root{ --bg:#14120d; --panel:#1d1a14; --panel2:#252016; --gold:#e7c587;
+         --goldd:#c9a96a; --txt:#ddd6c6; --muted:#928d85; --green:#7fcf9f;
+         --red:#e0908a; --line:#3a3326; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--txt);
+        font-family:-apple-system,Segoe UI,Roboto,sans-serif; line-height:1.55;
+        font-size:16px; padding:18px; }
+  .wrap{ max-width:780px; margin:0 auto; }
+  h1{ color:var(--gold); font-size:23px; text-align:center; margin:6px 0 2px; }
+  .sub{ text-align:center; color:var(--muted); margin:0 0 22px; font-size:14.5px; }
+  h2{ color:var(--gold); font-size:18px; margin:30px 0 10px;
+      border-bottom:1px solid var(--line); padding-bottom:5px; }
+  p{ margin:8px 0; }
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:12px;
+          padding:14px 16px; margin:12px 0; }
+  .jar{ background:var(--panel2); border:1px solid var(--goldd); border-radius:10px;
+        padding:10px 13px; margin:7px 0; }
+  .jar .id{ color:var(--gold); font-weight:700; font-size:14px; font-family:ui-monospace,monospace; }
+  .jar .tx{ color:var(--txt); font-size:14.5px; margin-top:3px; }
+  .ptr{ display:flex; align-items:center; gap:10px; margin:6px 0; flex-wrap:wrap; }
+  .svc{ background:var(--panel2); border:1px solid var(--line); border-radius:8px;
+        padding:7px 12px; font-weight:600; min-width:200px; }
+  .arrow{ color:var(--gold); font-size:20px; font-weight:700; }
+  .take{ color:var(--green); font-family:ui-monospace,monospace; font-size:13.5px;
+         background:rgba(127,207,159,.08); border:1px solid rgba(127,207,159,.3);
+         border-radius:7px; padding:5px 10px; }
+  .bad{ border-color:rgba(224,144,138,.5); }
+  .bad .lbl{ color:var(--red); }
+  .good{ border-color:rgba(127,207,159,.5); }
+  .good .lbl{ color:var(--green); }
+  .lbl{ font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:7px; }
+  .copy{ background:var(--panel2); border:1px dashed rgba(224,144,138,.45); border-radius:7px;
+         padding:7px 11px; margin:5px 0; font-size:14px; color:#cdbfb0; }
+  .copy .note{ color:var(--red); font-size:12.5px; }
+  .shelf{ background:var(--panel2); border:1px solid var(--line); border-left:4px solid var(--goldd);
+          border-radius:8px; padding:9px 13px; margin:7px 0; }
+  .shelf .k{ color:var(--gold); font-family:ui-monospace,monospace; font-weight:700; }
+  .shelf .d{ color:var(--muted); font-size:14px; }
+  .rule{ display:flex; gap:11px; align-items:flex-start; margin:11px 0; }
+  .rule .n{ flex:0 0 30px; height:30px; border-radius:50%; background:var(--gold); color:#1a1610;
+            font-weight:800; display:flex; align-items:center; justify-content:center; font-size:15px; }
+  .flow{ display:flex; flex-direction:column; gap:4px; }
+  .flow .step{ display:flex; align-items:center; gap:9px; }
+  .flow .dot{ color:var(--gold); font-size:18px; }
+  .em{ color:var(--gold); font-weight:600; }
+  .small{ font-size:13.5px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>🫙 Як влаштована наша бібліотека</h1>
+  <p class="sub">На пальцях, без жодного програмування</p>
+
+  <h2>1. Комора з банками</h2>
+  <div class="panel">
+    <p><b>Бібліотека</b> — це комора. У ній стоять <b>банки</b>, на кожній наклейка-назва.
+       В одній банці — один текст.</p>
+    <p><b>Служба</b> — це рецепт. Він не переписує текст, а каже: «візьми оцю банку».</p>
+    <p>Сіль не висипають у кожен рецепт — на неї <b>показують пальцем</b>. Змінилась сіль —
+       міняєш <span class="em">одну банку</span>, і вона оновилась у всіх рецептах.</p>
+  </div>
+
+  <h2>2. Реальний приклад — стихири Пасхи</h2>
+  <p>Вони звучать у двох службах: <b>Пасхальна рання</b> і <b>Освячення пасок</b>.</p>
+
+  <div class="panel bad">
+    <div class="lbl">❌ Якби робили неправильно — копія в кожній службі</div>
+    <div class="copy">Рання: «Пасха священна сьогодні з’явилася нам…» <span class="note">← повний текст</span></div>
+    <div class="copy">Пасок: «Пасха священна сьогодні з’явилася нам…» <span class="note">← та сама копія</span></div>
+    <p class="small">Церква змінила слово → правиш у двох місцях, одне забув → різнобій. Оце і лякає.</p>
+  </div>
+
+  <div class="panel good">
+    <div class="lbl">✅ Як ми зробили — одна банка, два пальці</div>
+    <div class="jar">
+      <div class="id">🫙 stihyry-paskhy</div>
+      <div class="tx">«Пасха священна сьогодні з’явилася нам, – Пасха нова, святая… Воскресіння день, і просвітімось торжеством…» <span class="small">(10 блоків)</span></div>
+    </div>
+    <div class="ptr"><div class="svc">Пасхальна рання</div><span class="arrow">→</span><span class="take">взяти банку: stihyry-paskhy</span></div>
+    <div class="ptr"><div class="svc">Освячення пасок</div><span class="arrow">→</span><span class="take">взяти банку: stihyry-paskhy</span></div>
+    <p class="small">Текст <b>один</b>. Правиш банку раз — оновилось в обох. А в додатку отець усюди
+       бачить повний текст (банка розкривається сама). <b>Це вже зроблено сьогодні.</b></p>
+  </div>
+
+  <h2>3. Полиці комори — постійні тексти</h2>
+  <p>Усе, що звучить щоразу однаково, стоїть на полицях за назвою-початком:</p>
+  <div class="shelf"><span class="k">ektenia-*</span> <span class="d">— ектенії (велика, мала, потрійна, благальна…)</span></div>
+  <div class="shelf"><span class="k">vyholos-*</span> <span class="d">— виголоси священника</span></div>
+  <div class="shelf"><span class="k">molytva-*</span> <span class="d">— тихі молитви</span></div>
+  <div class="shelf"><span class="k">spiv-*</span> <span class="d">— постійні піснеспіви хору (Отче наш, херувимська…)</span></div>
+  <div class="shelf"><span class="k">stihyry-*</span> <span class="d">— стихири (паски… нову полицю заводимо, коли треба)</span></div>
+
+  <h2>4. Шухляди — змінні тексти за ключем</h2>
+  <p>Те, що залежить від <b>дня / гласу / свята</b>, лежить не банками, а в таблицях-шухлядах,
+     де кожен рядок має «код» (ключ) для підстановки:</p>
+  <div class="shelf"><span class="k">GLASI</span> <span class="d">— недільне за 8 гласів (Октоїх): тропар, кондак, прокимен…</span></div>
+  <div class="shelf"><span class="k">FEASTS</span> <span class="d">— картки свят (Мінея): як «Всіх святих землі Української»</span></div>
+  <p class="small">Октоїх — це <b>8 гласів</b>, скінченна таблиця. Не нескінченність, а великий упорядкований аркуш.</p>
+
+  <h2>5. Як збирається служба на конкретний день</h2>
+  <div class="panel">
+    <p>Рушій на дату бере потрібне з полиць і шухляд і складає <b>один екран</b>:</p>
+    <div class="flow">
+      <div class="step"><span class="dot">▸</span> банка <span class="em">ektenia-velyka</span> (полиця)</div>
+      <div class="step"><span class="dot">▸</span> банка <span class="em">vyholos-…</span> (полиця)</div>
+      <div class="step"><span class="dot">▸</span> рядок <span class="em">тропар гласу 1</span> (шухляда GLASI)</div>
+      <div class="step"><span class="dot">▸</span> рядок <span class="em">тропар свята дня</span> (шухляда FEASTS)</div>
+      <div class="step"><span class="dot">▸</span> банка <span class="em">spiv-otche-nash</span> (полиця)</div>
+    </div>
+    <p class="small">Кожен текст — або <b>банка на полиці</b>, або <b>рядок у шухляді за ключем</b>.
+       Третього не буває → «безхатнього» тексту не існує.</p>
+  </div>
+
+  <h2>6. Три правила, щоб не боятися масштабу</h2>
+  <div class="rule"><div class="n">1</div><div><b>Текст у 2+ службах → банка.</b> В одній службі → лишається на місці. Не дробимо одноразове.</div></div>
+  <div class="rule"><div class="n">2</div><div><b>Наповнюємо по ходу.</b> Банку чи рядок додаємо лише тоді, коли служба їх просить. Весь Октоїх наперед не вантажимо.</div></div>
+  <div class="rule"><div class="n">3</div><div><b>Обсяг = твоя практика.</b> Не вся Мінея, а те, що ти реально служиш. Книги — резервуар; черпаємо потрібне.</div></div>
+
+  <p class="small" style="text-align:center; margin-top:26px;">
+     Файлів — десяток (по типу), а не тисячі. Тексту багато, але він на полицях і в шухлядах. Гора скінченна. 🕊️</p>
+
+</div>
+</body>
+</html>
