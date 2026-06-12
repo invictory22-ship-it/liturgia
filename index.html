@@ -2548,7 +2548,7 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=92';
+  s.src = 'data-vkazivky-2026.js?v=93';
   s.onload = () => { if (document.getElementById('sohodniOut')) buildSohodni(); };
   document.head.appendChild(s);
 }
