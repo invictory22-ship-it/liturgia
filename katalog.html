@@ -28,6 +28,8 @@
   .tag{ background:rgba(125,95,180,.16); color:var(--gold); font-size:11.5px;
         border-radius:20px; padding:2px 9px; }
   .cnt{ color:var(--muted); font-size:11.5px; }
+  .de{ color:var(--green); font-size:12px; margin-top:4px; }
+  .de .x{ color:var(--muted); }
   .no-meta{ border-left-color:var(--muted); }
   .no-meta .nm{ color:var(--txt); }
   .hint{ color:var(--muted); font-size:11.5px; font-style:italic; }
@@ -46,6 +48,8 @@
 </div>
 
 <script src="liturgy-fragments.js"></script>
+<script src="liturgy-data.js"></script>
+<script src="svc-pascha.js"></script>
 <script src="fragments-catalog.js"></script>
 <script>
   const SHELVES = [
@@ -72,13 +76,29 @@
     return SHELVES.some(s => s[0] === p) ? p : '';
   }
 
+  // де використовується кожна банка — читаємо реальні служби (SERVICES)
+  function scanIncludes(blocks, set){
+    for (const b of blocks){
+      if (b.t === 'include') set.add(b.id);
+      if (Array.isArray(b.blocks)) scanIncludes(b.blocks, set);
+    }
+  }
+  const USAGE = {};
+  if (typeof SERVICES !== 'undefined'){
+    for (const svc of SERVICES){
+      const set = new Set(); scanIncludes(svc.blocks || [], set);
+      set.forEach(id => { (USAGE[id] = USAGE[id] || []).push(svc.name); });
+    }
+  }
+
   const ALL = Object.keys(typeof FRAGMENTS !== 'undefined' ? FRAGMENTS : {}).map(id => {
     const m = META[id] || {};
     const tx = firstText(FRAGMENTS[id]);
+    const de = USAGE[id] || [];
     return {
-      id, nazva: m.nazva || '', tags: m.tags || [], synonyms: m.synonyms || [],
+      id, nazva: m.nazva || '', tags: m.tags || [], synonyms: m.synonyms || [], de,
       text: tx, n: countBlocks(FRAGMENTS[id]), shelf: shelfOf(id),
-      hay: (id + ' ' + (m.nazva||'') + ' ' + (m.tags||[]).join(' ') + ' ' + (m.synonyms||[]).join(' ') + ' ' + tx).toLowerCase()
+      hay: (id + ' ' + (m.nazva||'') + ' ' + (m.tags||[]).join(' ') + ' ' + (m.synonyms||[]).join(' ') + ' ' + de.join(' ') + ' ' + tx).toLowerCase()
     };
   });
 
@@ -107,6 +127,10 @@
         const c = document.createElement('span'); c.className = 'cnt'; c.textContent = j.n + ' бл.'; meta.appendChild(c);
         if (!j.nazva){ const hh = document.createElement('span'); hh.className = 'hint'; hh.textContent = '· підпис ще не задано'; meta.appendChild(hh); }
         d.appendChild(meta);
+        const dd = document.createElement('div'); dd.className = 'de';
+        dd.innerHTML = j.de.length ? '<span class="x">де: </span>' + j.de.join(' · ')
+                                   : '<span class="x">де: ще ніде не використана</span>';
+        d.appendChild(dd);
         out.appendChild(d);
       }
     }
