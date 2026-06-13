@@ -2578,10 +2578,14 @@ const VKAZ_SKIP_RE = new RegExp(
 // Виняток: «замість» одразу після відкритої лапки « — це слова самого піснеспіву
 // (тропар «Замість двох горлиць…»), не вказівка → не чіпаємо.
 const VKAZ_SUBST_RE = /(?<!«)[Зз]амість/g;
+// «немає / нема» — підказка «чогось нема» (Входу немає, кафизми немає, Малих ектеній немає),
+// тим же коралом. Межу слова даємо lookahead-ом (JS \b не розуміє кирилиці).
+const VKAZ_NEMA_RE = /[Нн]ема(?:є)?(?=[\s.,:;»)]|$)/g;
 const vkazChin = (html) => html
   .replace(VKAZ_NOLIT_RE, '<span class="vkaz-noliturgy">$&</span>')
   .replace(VKAZ_SKIP_RE, '<span class="vkaz-skip">$&</span>')
   .replace(VKAZ_SUBST_RE, '<span class="vkaz-skip">$&</span>')
+  .replace(VKAZ_NEMA_RE, '<span class="vkaz-skip">$&</span>')
   .replace(VKAZ_CHIN_RE, '<span class="vkaz-chin">$&</span>');
 // Рядок зачал: позначку-дороговказ (служба «Ран./Літ./На N часі –» або чин святого
 // «Свт.:/Прп.:/Суботи перед…:») фарбуємо золотом, саме посилання лишається синім.
