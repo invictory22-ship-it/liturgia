@@ -524,9 +524,9 @@
   .day-plashka .d2 { color: var(--gold-dim); font-size: 12.5px; margin-top: 2px; }
   /* Богослужбові вказівки дня */
   .vkaz-body { padding: 4px 13px 2px; }   /* бічні відступи тексту вказівок від рамки */
-  .vkaz-title { font-weight: 600; color: var(--feast-name); font-size: 15px; line-height: 1.55; margin: 4px 0 2px; }
-  .vkaz-title .vkaz-saint { color: var(--feast-txt); }       /* імена святих — кремово-білі, скромніше за назви свят (золоті) */
-  .vkaz-title .vkaz-icon  { color: var(--cat-theotokos); }   /* ікони Божої Матері — блакитні (як трикутник Богородичного) */
+  .vkaz-title { font-weight: 600; color: var(--feast-txt); font-size: 15px; line-height: 1.55; margin: 4px 0 2px; }
+  .vkaz-title .vkaz-saint { color: var(--feast-name); font-weight: 400; }   /* імена святих — золоті, не жирні */
+  .vkaz-title .vkaz-icon  { color: #84b3ec; font-weight: 400; }   /* ікони Божої Матері — м'який синій (як зачала), не жирний */
   .vkaz-read { border: 1px solid rgba(90,130,190,.38); border-radius: 8px;
     padding: 7px 11px; margin: 8px 0; }
   .vkaz-read-lbl { color: var(--feast-meta); font-size: 11.5px; text-transform: uppercase;
@@ -562,8 +562,11 @@
   .cal-day.today { border-color: var(--gold-border-soft); border-style: dashed; }
   .cal-day.sel { background: linear-gradient(180deg, var(--gold-strip-1), var(--gold-strip-2));
     border: 1px solid var(--gold-border-soft); color: var(--gold-text); font-weight: 600; }
+  .cal-marks { position: absolute; left: 50%; transform: translateX(-50%); bottom: 3px;
+    display: flex; gap: 2px; line-height: 1; }   /* ряд значків: свято ▸ + віддання ◂ поряд при збігу */
   .cal-tri { position: absolute; left: 50%; transform: translateX(-50%); bottom: 3px;
     font-size: 12px; line-height: 1; }
+  .cal-marks .cal-tri { position: static; left: auto; transform: none; bottom: auto; }
   .cal-tri.cat-lord      { color: var(--cat-lord); }
   .cal-tri.cat-theotokos { color: var(--cat-theotokos); }
   .cal-tri.cat-great     { color: var(--cat-great); }
@@ -2381,6 +2384,25 @@ function feastDots(y, mIdx){
   return map;
 }
 
+// Тип свята за назвою (для кольору значка віддання): Богородичне / Господнє / інше велике.
+function feastTypeFromTitle(t){
+  if (/Богородиц|Успіння|Введення|Стрітення|Покров/i.test(t)) return 'theotokos';
+  if (/Воздвиження|Хрест|Воскресіння|Пасх|Господн|Преображення|Вознесіння|Богоявлення|Хрещення|Різдва Христового/i.test(t)) return 'lord';
+  return 'great';
+}
+// Дні ВІДДАННЯ свята (за богослужбовими вказівками: заголовок містить «Віддання») → значок ◂.
+// Колір — за типом свята. (Лінива загрузка: поки VKAZIVKY не підвантажено, значків нема.)
+function vidannyaDots(mIdx){
+  const map = {};
+  if (typeof VKAZIVKY_2026 === 'undefined') return map;
+  const mm = String(mIdx + 1).padStart(2, '0');
+  VKAZIVKY_2026.forEach(d => {
+    if (!d.date || d.date.slice(0, 2) !== mm || !/Віддання/.test(d.title || '')) return;
+    map[parseInt(d.date.slice(3, 5), 10)] = feastTypeFromTitle(d.title);
+  });
+  return map;
+}
+
 // Багатоденні пости + строгі одноденні (фіолетова підкладка). Середи/п'ятниці
 // не позначаємо — зарябить. Великий піст рахується від Пасхи (48 днів зі Страсним),
 // Петрів — з понеділка після Всіх святих до 28.06; Успенський 1–14.08;
@@ -2444,11 +2466,12 @@ function drawCal(){
   const daysIn = new Date(Date.UTC(calY, calM + 1, 0)).getUTCDate();
   const prevDays = new Date(Date.UTC(calY, calM, 0)).getUTCDate();
   // позначки свят — для показаного місяця І сусідніх (видно на приглушених днях)
-  const dotsBy = {};
+  const dotsBy = {}, vidBy = {};
   [-1, 0, 1].forEach(off => {
     let y = calY, mi = calM + off;
     if (mi < 0){ mi = 11; y--; } if (mi > 11){ mi = 0; y++; }
     dotsBy[off] = feastDots(y, mi);
+    vidBy[off] = vidannyaDots(mi);
   });
   const tISO = todayISO();
   const isoFor = (y, mIdx, d) => y + '-' + String(mIdx + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
@@ -2464,12 +2487,13 @@ function drawCal(){
     c.textContent = num;
     // постова підкладка і трикутники свят — і на приглушених днях сусідніх місяців
     if (isFastDay(y, mIdx, num)) c.classList.add('fast');
-    const tp = dotsBy[monthOff][num];
-    if (tp){
-      const tri = document.createElement('span');
-      tri.className = 'cal-tri cat-' + tp;
-      tri.textContent = '▸';
-      c.appendChild(tri);
+    const tp = dotsBy[monthOff][num];      // свято → ▸
+    const vd = vidBy[monthOff][num];       // віддання → ◂
+    if (tp || vd){
+      const mk = document.createElement('span'); mk.className = 'cal-marks';
+      if (tp){ const a = document.createElement('span'); a.className = 'cal-tri cat-' + tp; a.textContent = '▸'; mk.appendChild(a); }
+      if (vd){ const b = document.createElement('span'); b.className = 'cal-tri cat-' + vd; b.textContent = '◂'; mk.appendChild(b); }
+      c.appendChild(mk);
     }
     if (monthOff === 0){
       if (iso === sohodniISO) c.classList.add('sel');
@@ -2584,7 +2608,7 @@ function ensureVkazivky(){
   _vkazInjected = true;
   const s = document.createElement('script');
   s.src = 'data-vkazivky-2026.js?v=100';
-  s.onload = () => { if (document.getElementById('sohodniOut')) buildSohodni(); };
+  s.onload = () => { drawCal(); if (document.getElementById('sohodniOut')) buildSohodni(); };   // перемалювати календар — з'являться значки віддання ◂
   document.head.appendChild(s);
 }
 function vkazRec(iso){
@@ -2604,6 +2628,9 @@ const TITLE_ABBR = ['прп','прпп','мч','мчч','мц','мцц','свт'
 // Класифікація рядка заголовка: починається з абревіатури поминання (Прп./Свт./Св.…) → святий;
 // решта (назви свят/періодів) лишаються золотими; ікони БМ ловимо окремо в vkazTitleHTML.
 const TITLE_SAINT_RE = new RegExp('^(?:' + TITLE_ABBR.join('|') + ')\\.', 'i');
+// «дата в дужках» — рік (845), «бл. 80», «IX ст.», римські (V)/(ХІІ)/(XV – XVI): ознака пам'яті
+// святого, навіть якщо рядок починається повним словом («Апостола Іуди…», «Перенесення мощів…»).
+const TITLE_DATE_RE = /\([^)]*(?:\d|ст\.|бл\.)[^)]*\)|\([IVXLCMDІХ]+(?:\s*[–-]\s*[IVXLCMDІХ]+)*\s*[,)]/;
 function vkazTitleHTML(title){
   let s = vkazEsc(title).replace(/\.\s+(?=[А-ЯІЇЄҐ])/g, '.\x03');
   TITLE_ABBR.forEach(a => { s = s.replace(new RegExp('(' + a + ')\\.\x03', 'gi'), '$1. '); });
@@ -2615,9 +2642,11 @@ function vkazTitleHTML(title){
   const html = s.split('\x03').map(seg => {
     const t = seg.trim();
     if (!t) return '';
-    if (TITLE_SAINT_RE.test(t)) return '<span class="vkaz-saint">' + t + '</span>';
-    if (/ікон/i.test(t) && /Богородиц|Бож/i.test(t)) return '<span class="vkaz-icon">' + t + '</span>';
-    return t;
+    if (TITLE_SAINT_RE.test(t)) return '<span class="vkaz-saint">' + t + '</span>';                 // абревіатура (Прп./Свт.) → святий
+    if (/ікон/i.test(t) && /Богородиц|Бож/i.test(t)) return '<span class="vkaz-icon">' + t + '</span>';  // ікона БМ → синій
+    if (!/^\d/.test(t) && !/перехідн/i.test(t) && TITLE_DATE_RE.test(t))                              // повне ім'я з датою → святий; період (з цифри) і перехідне — ні
+      return '<span class="vkaz-saint">' + t + '</span>';
+    return t;                                                                                         // назва свята / період / перехідне → золотий (default)
   }).filter(Boolean).join('<br>');
   return vkazChin(html);
 }
