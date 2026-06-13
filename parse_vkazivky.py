@@ -22,6 +22,15 @@ SERVICES = (r"ВЕЛИКІЙ ВЕЧІРНІ|МАЛІЙ ВЕЧІРНІ|ПОВСЯ
             r"ПОВЕЧІР’Ї|ПОЛУНОШНИЦІ|РАННІЙ|УТРЕНІ|ЧАСАХ|ЗОБРАЖАЛЬНИХ|ЛІТУРГІЇ")
 SEC_RE = re.compile(r'^(?:НА|На)\s+(' + SERVICES + r')\b')
 
+# Рядок-ЧИТАННЯ (зачало/паремія) у блоці «Порядок читань». Збираємо доти, доки рядок
+# схожий на читання, бо паремії Великого посту («На 6-му часі: Іс…», «На веч.: Бут…»,
+# «Притч…», «Благовіщення: Вих…») НЕ містять «зач.» і раніше з'їжджали в notes.
+BOOKREF = re.compile(r'[А-ЯІЇЄҐ][а-яіїєґ]{0,9}\.\s+[IVXLCDMІ]')   # «Іс. XLI», «Притч. XV», «Вих. III»
+READ_START = re.compile(r'^(?:Ран\.|Літ\.|Утр\.|Веч\.|Апп?\.:|Лит|Ряд\.:|'
+                        r'На \d+-?(?:му|й|ій|ому)?\s+(?:часі|годині)|На веч\.|На утр\.|\()')
+def is_read_line(ln):
+    return ('зач.' in ln) or bool(READ_START.match(ln)) or bool(BOOKREF.search(ln))
+
 # Колонтитули сторінок PDF (інтерлайн від pdftotext): назва видання, ВЕЛИКІ-місяці,
 # голі номери сторінок. Засмічують текст і РОЗРИВАЮТЬ блоки (напр. «Порядок читань»
 # на 14/19.06 → зачала з'їжджали в notes). Прибираємо ЦІЛИМИ рядками ДО склейки.
@@ -70,7 +79,7 @@ def parse_day(seg):
         title_lines.append(head[i]); i += 1
     if i < len(head):
         i += 1
-        while i < len(head) and ('зач.' in head[i] or re.match(r'(Ран\.|Літ\.|Утр\.|Веч\.|Апп\.:|Лит)', head[i])):
+        while i < len(head) and is_read_line(head[i]):
             readings.append(head[i]); i += 1
     notes = head[i:]
 
@@ -108,6 +117,14 @@ def main():
             for i, m in enumerate(ms)]
 
     arg = sys.argv[1] if len(sys.argv) > 1 else ''
+    if arg == 'emit':   # лише readings/notes/nsec для звірки — БЕЗ перезапису даних
+        em = [{'date': d['date'], 'readings': d.get('readings'),
+               'notes': d.get('notes'), 'nsec': len(d.get('sections', [])),
+               'special': d.get('special', False)} for d in days]
+        io.open('data-vkazivky-2026.tmp.json', 'w', encoding='utf-8').write(
+            json.dumps(em, ensure_ascii=False))
+        print('emit:', len(em), 'днів → data-vkazivky-2026.tmp.json')
+        return
     if arg == 'stats':
         from collections import Counter
         print('днів:', len(days), '| унікальних:', len(set(d['date'] for d in days)))
