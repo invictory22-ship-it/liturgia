@@ -425,6 +425,14 @@
   .ref-feast .feast-meta { margin: 4px 0 0 18px; color: var(--feast-meta); font-size: 13px; }
   .ref-feast .feast-rank { opacity: .65; font-style: italic; }
   .ref-note { margin: 8px 0 4px; padding: 8px 12px; border-left: 3px solid var(--gold-line, #b0944a); background: rgba(176,148,74,.08); color: #cdbf9a; font-style: italic; font-size: 15px; line-height: 1.5; border-radius: 3px; }
+  /* Страсний тиждень: спільна рамка «як читаються Євангелія Пн–Ср на 3/6/9 часах» — видима, але можна згорнути */
+  .strasni-box { margin: 10px 0; border: 1px solid #8a5a3a; border-radius: 8px; background: rgba(170,90,50,.07); padding: 4px 0; }
+  .strasni-box > summary { cursor: pointer; list-style: none; padding: 8px 14px; color: #e8956a; font-weight: 600; font-size: 14px; }
+  .strasni-box > summary::-webkit-details-marker { display: none; }
+  .strasni-box > summary::before { content: var(--ic-open) " "; }
+  .strasni-box:not([open]) > summary::before { content: var(--ic-closed) " "; }
+  .strasni-box .strasni-cmt { margin: 0 14px 6px; padding: 6px 10px; border-left: 3px solid #8a5a3a; background: rgba(170,90,50,.10); color: #e0b59a; font-style: italic; font-size: 13.5px; line-height: 1.5; border-radius: 3px; }
+  .strasni-box .vkaz-text { padding: 0 14px 8px; }
   /* кольори категорій свят — зі спільної палітри (:root угорі) */
   .ref-feast.cat-lord      .feast-name::before,
   .feast-legend .cat-lord      { color: var(--cat-lord); }       /* Господнє — червоний */
@@ -2538,6 +2546,7 @@ const SVC_LABEL = {
   'УТРЕНІ': 'На утрені', 'ЧАСАХ': 'На часах', 'ЛІТУРГІЇ': 'На Літургії',
   'ЗОБРАЖАЛЬНИХ': 'На зображальних', 'ЗОБРАЖАЛЬНІ': 'Зображальні', 'МАЛОМУ ПОВЕЧІР’Ї': 'На малому повечір’ї',
   'ВЕЛИКОМУ ПОВЕЧІР’Ї': 'На великому повечір’ї', 'ПОВЕЧІР’Ї': 'На повечір’ї',
+  'МАЛЕ ПОВЕЧІР’Я': 'На малому повечір’ї',
   'ПОЛУНОШНИЦІ': 'На полуношниці', 'РАННЯ': 'На ранній', 'ЧАСИ': 'Часи',
   'ВЕЧІРНЯ': 'На вечірні', 'ВЕЛИКЕ ПОВЕЧІР’Я': 'На великому повечір’ї', 'ПОВЕЧІР’Я': 'На повечір’ї',
   'ГРЕЦЬКИЙ УСТАВ': 'Грецький устав віддання Пасхи (з Плащаницею) — додатково'
@@ -2545,8 +2554,8 @@ const SVC_LABEL = {
 // довгі служби → золотий вкладений акордеон; короткі (часи/літургія) → просто текст
 const SVC_GOLD = new Set(['ВЕЛИКІЙ ВЕЧІРНІ','МАЛІЙ ВЕЧІРНІ','ВЕЧІРНІ','ПОВСЯКДЕННІЙ ВЕЧІРНІ',
   'ВЕЧІРНІ ІЗ ЛІТУРГІЄЮ','РАННІЙ','УТРЕНІ','ВЕЛИКОМУ ПОВЕЧІР’Ї','МАЛОМУ ПОВЕЧІР’Ї',
-  'ПОВЕЧІР’Ї','ПОЛУНОШНИЦІ','ГРЕЦЬКИЙ УСТАВ','РАННЯ','ЧАСИ','ВЕЛИКЕ ПОВЕЧІР’Я','ВЕЧІРНЯ','ПОВЕЧІР’Я',
-  'ВЕЛИКА ВЕЧІРНЯ','ЗОБРАЖАЛЬНІ']);
+  'ПОВЕЧІР’Ї','ПОЛУНОШНИЦІ','ГРЕЦЬКИЙ УСТАВ','РАННЯ','ЧАСИ','ЧАСАХ','ВЕЛИКЕ ПОВЕЧІР’Я','МАЛЕ ПОВЕЧІР’Я','ВЕЧІРНЯ','ПОВЕЧІР’Я',
+  'ВЕЛИКА ВЕЧІРНЯ','ЗОБРАЖАЛЬНІ','ЗОБРАЖАЛЬНИХ']);
 
 // Рубрики — типові початки вказівок; жирним лише на початку речення (після . » – або з краю).
 const VKAZ_RUBRICS = ['Примітка','Примітки','Варіанти','Перший варіант','Другий варіант',
@@ -2628,7 +2637,7 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=110';
+  s.src = 'data-vkazivky-2026.js?v=111';
   s.onload = () => { drawCal(); if (document.getElementById('sohodniOut')) buildSohodni(); };   // перемалювати календар — з'являться значки віддання ◂
   document.head.appendChild(s);
 }
@@ -2778,6 +2787,22 @@ function buildSohodni(){
         rb.appendChild(rr);
       });
       vbody.appendChild(rb);
+    }
+    // Страсний тиждень (Пн–Ср): спільна рамка з розкладом Четвероєвангелія на часах — під зачалами
+    const strasniTxt = vrec.strasniGospels ||
+      (vrec.strasniGospelsRef && typeof VKAZIVKY_2026 !== 'undefined'
+        ? (VKAZIVKY_2026.find(x => x.date === vrec.strasniGospelsRef) || {}).strasniGospels : null);
+    if (strasniTxt){
+      const box = document.createElement('details'); box.className = 'strasni-box'; box.open = true;
+      const sm = document.createElement('summary');
+      sm.textContent = 'Як читаються Євангелія на Страсному тижні (Пн–Ср)';
+      box.appendChild(sm);
+      const cmt = document.createElement('div'); cmt.className = 'strasni-cmt';
+      cmt.textContent = 'Четвероєвангеліє читається на 3-му, 6-му і 9-му часах у понеділок, вівторок і середу. Нижче — повний розклад на всі три дні (однаковий, незалежно від дня).';
+      box.appendChild(cmt);
+      const tx = document.createElement('div'); tx.className = 'vkaz-text'; tx.innerHTML = vkazBold(strasniTxt);
+      box.appendChild(tx);
+      vbody.appendChild(box);
     }
     if (vrec.notes){
       const nn = document.createElement('div'); nn.className = 'vkaz-notes'; nn.innerHTML = vkazChin(vkazEsc(vrec.notes));
