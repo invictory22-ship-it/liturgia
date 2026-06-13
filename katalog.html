@@ -91,16 +91,34 @@
     }
     return b.text || b.name || ('[' + b.t + ']');
   }
-  function addrOf(arr, i){
-    const nx = arr[i+1];
-    return nx ? 'перед «' + clip(labelOf(nx), 48) + '»' : 'наприкінці служби';
+  function kindOf(id){ return (id||'').split('-')[0]; }
+  // КІСТЯК (орієнтир): say, prayer, або include НЕ-ремарки. ГЛЕЙ (stage/choir/header/title/fold +
+  // include-ремарки) — перестрибуємо, бо рухоме або безлике-повторюване (Амінь, Господи помилуй…).
+  function isAnchor(b){
+    if (b.t === 'say' || b.t === 'prayer') return true;
+    if (b.t === 'include' && kindOf(b.id) !== 'remarka') return true;
+    return false;
+  }
+  function addrOf(arr, i, id){
+    const k = kindOf(id);
+    if (k === 'vyholos'){            // виголос → НАЗАД, на свою молитву/ектенію
+      for (let j = i - 1; j >= 0; j--) if (isAnchor(arr[j])) return 'завершує «' + clip(labelOf(arr[j]), 46) + '»';
+      return 'на початку служби';
+    }
+    if (k === 'remarka'){            // ремарка → ВПЕРЕД, на наступний орієнтир (глей перестрибуємо)
+      for (let j = i + 1; j < arr.length; j++) if (isAnchor(arr[j])) return 'перед «' + clip(labelOf(arr[j]), 46) + '»';
+      return 'наприкінці служби';
+    }
+    return '';                       // сам орієнтир — докладна адреса не потрібна, досить «де»
   }
   const USAGE = {};
   function walkUsage(blocks, svcName){
     for (let i = 0; i < blocks.length; i++){
       const b = blocks[i];
       if (b.t === 'include'){
-        (USAGE[b.id] = USAGE[b.id] || []).push({ svc: svcName, addr: addrOf(blocks, i) });
+        const addr = addrOf(blocks, i, b.id);
+        const u = (USAGE[b.id] = USAGE[b.id] || []);
+        if (!(addr === '' && u.some(x => x.svc === svcName && x.addr === ''))) u.push({ svc: svcName, addr });
       }
       if (Array.isArray(b.blocks)) walkUsage(b.blocks, svcName);
     }
@@ -147,7 +165,8 @@
         d.appendChild(meta);
         const dd = document.createElement('div'); dd.className = 'de';
         dd.innerHTML = j.de.length
-          ? j.de.map(u => '<span class="x">де:</span> ' + esc(u.svc) + ' <span class="x">→</span> ' + esc(u.addr)).join('<br>')
+          ? j.de.map(u => '<span class="x">де:</span> ' + esc(u.svc) +
+              (u.addr ? ' <span class="x">→</span> ' + esc(u.addr) : '')).join('<br>')
           : '<span class="x">де: ще ніде не використана</span>';
         d.appendChild(dd);
         out.appendChild(d);
