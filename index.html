@@ -2570,7 +2570,7 @@ const VKAZ_NOLIT_RE = /Літург[іії][їяіею]?[^.»]{0,45}?не зве
 // «Що НЕ робимо» — підказки «не співається / не читається / не буває». Якщо одразу
 // перед дієсловом стоїть підмет у лапках («Достойно є» не співається) — беремо і його;
 // ловимо й подвійні («…» не читається й не співається). Без лапок — лише дієслово.
-const VKAZ_SKIP_VERB = '(?:співається|співаються|співаємо|співають|співати|читається|читаються|читаємо|читають|буває)';
+const VKAZ_SKIP_VERB = '(?:співається|співаються|співаємо|співають|співати|читається|читаються|читаємо|читають|виголош[а-яіїєґ]+|буває)';
 const VKAZ_SKIP_RE = new RegExp(
   '(?:«[^»<]{1,60}»[^.»–<()]{0,20}?)?не\\s+' + VKAZ_SKIP_VERB +
   '(?:\\s+[йі]\\s+не\\s+' + VKAZ_SKIP_VERB + ')?', 'g');
@@ -2611,7 +2611,7 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=100';
+  s.src = 'data-vkazivky-2026.js?v=101';
   s.onload = () => { drawCal(); if (document.getElementById('sohodniOut')) buildSohodni(); };   // перемалювати календар — з'являться значки віддання ◂
   document.head.appendChild(s);
 }
