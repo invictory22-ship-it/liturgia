@@ -547,6 +547,8 @@
   .vkaz-chin { color: #e8956a; font-weight: 600; }   /* чин Літургії (Золотоустого / Василія Великого / Ранішосвячених) — кораловий, щоб не сплутати з іменами святих */
   .vkaz-noliturgy { color: #f0a8a8; font-weight: 700; background: rgba(190,70,70,.18); padding: 0 5px; border-radius: 5px; }   /* стоп-помітка: день без Літургії */
   .vkaz-skip { color: #e8956a; font-weight: 600; }   /* «що НЕ робимо»: «…» не співається / не читається / не буває — кораловий (як чин) */
+  .vkaz-xref { color: #e8956a; font-weight: 600; }   /* «шукай деінде»: текст/зачала треба дістати з Мінеї/Загальної/Часослова/служби ін. святого */
+  .vkaz-xref::before { content: "\1f50e\202f"; font-weight: 400; }   /* 🔎 — щоб не плутати з «не робимо» */
   .vkaz-text .vp { display: block; margin: 0 0 6px; }   /* абзац на кожну рубрику */
   .vkaz-text .vp:last-child { margin-bottom: 0; }
   .vkaz-plain-lbl { font-weight: 600; color: var(--gold-text); font-size: 14px; margin: 11px 0 2px; }
@@ -2581,8 +2583,23 @@ const VKAZ_SUBST_RE = /(?<!«)[Зз]амість/g;
 // «немає / нема» — підказка «чогось нема» (Входу немає, кафизми немає, Малих ектеній немає),
 // тим же коралом. Межу слова даємо lookahead-ом (JS \b не розуміє кирилиці).
 const VKAZ_NEMA_RE = /[Нн]ема(?:є)?(?=[\s.,:;»)]|$)/g;
+// «Шукай деінде» — місця, де текст/зачала треба дістати з ІНШОЇ книги (Мінея, Загальна
+// Мінея, Часослов, Ірмологій…) або служби іншого святого/дня. Маркуємо 🔎+корал, щоб
+// священник не пропустив. Виключаємо «(див. Типікон…)» (це обґрунтування уставу, не
+// текст) і внутрішню навігацію «(див. після кафизми)». Кирилична «межа» — класами, не \w.
+const VKAZ_XREF_CY = 'А-Яа-яІЇЄҐіїєґ’\'';
+const VKAZ_XREF_V = '(?:запозич[' + VKAZ_XREF_CY + ']+|берем[' + VKAZ_XREF_CY + ']+|бер(?:уться|еться)|прийнят[' + VKAZ_XREF_CY + ']+\\s+(?:з|із|зі))';
+const VKAZ_XREF_T = '(?:Мінеї|Мінею|Мінея|Минеї|Минея|Загальн[' + VKAZ_XREF_CY + ']+|Часослов[' + VKAZ_XREF_CY + ']*|Ірмолог[' + VKAZ_XREF_CY + ']*|Псалтир[' + VKAZ_XREF_CY + ']*|Требник[' + VKAZ_XREF_CY + ']*)';
+const VKAZ_XREF_SRC = '(?:Мінеї|Мінею|Мінея|Минеї|Минея|Минею|Загальн[' + VKAZ_XREF_CY + ']+|Часослов[' + VKAZ_XREF_CY + ']*|Ірмолог[' + VKAZ_XREF_CY + ']*|Псалтир[' + VKAZ_XREF_CY + ']*|Требник[' + VKAZ_XREF_CY + ']*|додат[' + VKAZ_XREF_CY + ']+|служб[' + VKAZ_XREF_CY + ']+|служу)';
+const VKAZ_XREF_RE = new RegExp(
+  '\\((?:дивит[' + VKAZ_XREF_CY + ']*|див\\.)(?![^)]*(?:[Тт]ипікон|[Тт]ипикон|зри))[^)<]*' + VKAZ_XREF_SRC + '[^)<]*\\)' +
+  '|' + VKAZ_XREF_V + '[^.»()<]{0,70}?' + VKAZ_XREF_T +
+  '|(?:із|зі|з)\\s+[Зз]агальн[' + VKAZ_XREF_CY + ']+\\s+[Мм]інеї' +
+  '|у\\s+Мінеї\\s+за\\s+\\d{1,2}\\s+[' + VKAZ_XREF_CY + ']+',
+  'gi');
 const vkazChin = (html) => html
   .replace(VKAZ_NOLIT_RE, '<span class="vkaz-noliturgy">$&</span>')
+  .replace(VKAZ_XREF_RE, '<span class="vkaz-xref">$&</span>')
   .replace(VKAZ_SKIP_RE, '<span class="vkaz-skip">$&</span>')
   .replace(VKAZ_SUBST_RE, '<span class="vkaz-skip">$&</span>')
   .replace(VKAZ_NEMA_RE, '<span class="vkaz-skip">$&</span>')
