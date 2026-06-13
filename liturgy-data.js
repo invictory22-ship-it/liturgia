@@ -11,15 +11,12 @@ const BLOCKS = [
   "text": "Божественна Літургія\nсвятого Іоана Золотоустого"
  },
  {
-  "t": "stage",
-  "role": "",
-  "text": "Літургія служиться при відчинених царських вратах."
+  "t": "include",
+  "id": "remarka-vidchyneni-vrata"
  },
  {
-  "t": "stage",
-  "role": "",
-  "text": "Диякон виходить на амвон, хреститься:",
-  "solo": "hide"
+  "t": "include",
+  "id": "remarka-dyakon-amvon"
  },
  {
   "t": "say",
@@ -28,9 +25,8 @@ const BLOCKS = [
   "solo": "hide"
  },
  {
-  "t": "stage",
-  "role": "",
-  "text": "Священник бере святе Євангеліє, творить ним знак хреста над антимінсом і виголошує:"
+  "t": "include",
+  "id": "remarka-yevanheliie-znak"
  },
  {
   "t": "say",
@@ -52,9 +48,8 @@ const BLOCKS = [
   "id": "ektenia-velyka"
  },
  {
-  "t": "stage",
-  "role": "",
-  "text": "Священник тихо читає молитву першого антифону:"
+  "t": "include",
+  "id": "remarka-molytva-antyfon-1"
  },
  {
   "t": "include",
@@ -99,9 +94,8 @@ const BLOCKS = [
   "id": "ektenia-mala"
  },
  {
-  "t": "stage",
-  "role": "",
-  "text": "Священник тихо читає молитву другого антифону:"
+  "t": "include",
+  "id": "remarka-molytva-antyfon-2"
  },
  {
   "t": "include",
@@ -146,9 +140,8 @@ const BLOCKS = [
   "id": "ektenia-mala"
  },
  {
-  "t": "stage",
-  "role": "",
-  "text": "Священник тихо читає молитву третього антифону:"
+  "t": "include",
+  "id": "remarka-molytva-antyfon-3"
  },
  {
   "t": "include",

@@ -53,6 +53,7 @@
 <script src="fragments-catalog.js"></script>
 <script>
   const SHELVES = [
+    ['remarka','Ремарки (вказівки дій) — з адресою'],
     ['ektenia','Ектенії'], ['vyholos','Виголоси'], ['molytva','Тихі молитви'],
     ['spiv','Постійні піснеспіви'], ['stihyry','Стихири'], ['','Інше']
   ];
@@ -76,19 +77,36 @@
     return SHELVES.some(s => s[0] === p) ? p : '';
   }
 
-  // де використовується кожна банка — читаємо реальні служби (SERVICES)
-  function scanIncludes(blocks, set){
-    for (const b of blocks){
-      if (b.t === 'include') set.add(b.id);
-      if (Array.isArray(b.blocks)) scanIncludes(b.blocks, set);
+  // ДЕ + АДРЕСА: для кожного вжитку банки знаходимо сусідній орієнтир (наступний блок).
+  // Адреса належить ВЖИТКУ, не банці → одна банка може мати кілька різних адрес.
+  function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function clip(s,n){ s=(s||'').replace(/\s+/g,' ').trim(); return s.length>n ? s.slice(0,n-1)+'…' : s; }
+  function labelOf(b){
+    if (!b) return '';
+    if (b.t === 'include'){
+      const m = META[b.id];
+      if (m && m.nazva) return m.nazva;
+      const t = (typeof FRAGMENTS !== 'undefined' && FRAGMENTS[b.id]) ? firstText(FRAGMENTS[b.id]) : '';
+      return t || b.id;
     }
+    return b.text || b.name || ('[' + b.t + ']');
+  }
+  function addrOf(arr, i){
+    const nx = arr[i+1];
+    return nx ? 'перед «' + clip(labelOf(nx), 48) + '»' : 'наприкінці служби';
   }
   const USAGE = {};
-  if (typeof SERVICES !== 'undefined'){
-    for (const svc of SERVICES){
-      const set = new Set(); scanIncludes(svc.blocks || [], set);
-      set.forEach(id => { (USAGE[id] = USAGE[id] || []).push(svc.name); });
+  function walkUsage(blocks, svcName){
+    for (let i = 0; i < blocks.length; i++){
+      const b = blocks[i];
+      if (b.t === 'include'){
+        (USAGE[b.id] = USAGE[b.id] || []).push({ svc: svcName, addr: addrOf(blocks, i) });
+      }
+      if (Array.isArray(b.blocks)) walkUsage(b.blocks, svcName);
     }
+  }
+  if (typeof SERVICES !== 'undefined'){
+    for (const svc of SERVICES) walkUsage(svc.blocks || [], svc.name);
   }
 
   const ALL = Object.keys(typeof FRAGMENTS !== 'undefined' ? FRAGMENTS : {}).map(id => {
@@ -98,7 +116,7 @@
     return {
       id, nazva: m.nazva || '', tags: m.tags || [], synonyms: m.synonyms || [], de,
       text: tx, n: countBlocks(FRAGMENTS[id]), shelf: shelfOf(id),
-      hay: (id + ' ' + (m.nazva||'') + ' ' + (m.tags||[]).join(' ') + ' ' + (m.synonyms||[]).join(' ') + ' ' + de.join(' ') + ' ' + tx).toLowerCase()
+      hay: (id + ' ' + (m.nazva||'') + ' ' + (m.tags||[]).join(' ') + ' ' + (m.synonyms||[]).join(' ') + ' ' + de.map(d=>d.svc+' '+d.addr).join(' ') + ' ' + tx).toLowerCase()
     };
   });
 
@@ -128,8 +146,9 @@
         if (!j.nazva){ const hh = document.createElement('span'); hh.className = 'hint'; hh.textContent = '· підпис ще не задано'; meta.appendChild(hh); }
         d.appendChild(meta);
         const dd = document.createElement('div'); dd.className = 'de';
-        dd.innerHTML = j.de.length ? '<span class="x">де: </span>' + j.de.join(' · ')
-                                   : '<span class="x">де: ще ніде не використана</span>';
+        dd.innerHTML = j.de.length
+          ? j.de.map(u => '<span class="x">де:</span> ' + esc(u.svc) + ' <span class="x">→</span> ' + esc(u.addr)).join('<br>')
+          : '<span class="x">де: ще ніде не використана</span>';
         d.appendChild(dd);
         out.appendChild(d);
       }
