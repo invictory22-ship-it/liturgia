@@ -532,6 +532,7 @@
   .vkaz-read-lbl { color: var(--feast-meta); font-size: 11.5px; text-transform: uppercase;
     letter-spacing: .04em; margin-bottom: 3px; }
   .vkaz-read .r { color: #84b3ec; font-size: 14px; line-height: 1.55; margin-bottom: 4px; }
+  .vkaz-read .r-note { color: var(--feast-meta); font-size: 12.5px; font-style: italic; line-height: 1.45; margin: 6px 0 3px; }   /* пояснення серед зачал (не клікабельне зачало) */
   .vkaz-read .rl { color: var(--gold-text); font-weight: 600; }   /* позначка-дороговказ (служба/чин) */
   .vkaz-notes { font-style: italic; color: var(--feast-meta); font-size: 13.5px; line-height: 1.5; margin: 6px 0; }
   .vkaz-banner { background: rgba(125,95,180,.14); border-radius: 8px; padding: 8px 11px;
@@ -2629,7 +2630,7 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=113';
+  s.src = 'data-vkazivky-2026.js?v=114';
   s.onload = () => { drawCal(); if (document.getElementById('sohodniOut')) buildSohodni(); };   // перемалювати календар — з'являться значки віддання ◂
   document.head.appendChild(s);
 }
@@ -2774,7 +2775,8 @@ function buildSohodni(){
       const rl = document.createElement('div'); rl.className = 'vkaz-read-lbl';
       rl.textContent = 'Зачала (читання)'; rb.appendChild(rl);
       vrec.readings.forEach(r => {
-        const rr = document.createElement('div'); rr.className = 'r';
+        const rr = document.createElement('div');
+        rr.className = /зач\./.test(r) ? 'r' : 'r-note';   // рядок без «зач.» — це пояснення, а не зачало
         rr.innerHTML = vkazReadHTML(r);   // позначка золотом, посилання синім; Євангеліє з нового рядка
         rb.appendChild(rr);
       });
