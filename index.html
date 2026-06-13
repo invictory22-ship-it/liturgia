@@ -2628,7 +2628,7 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=109';
+  s.src = 'data-vkazivky-2026.js?v=110';
   s.onload = () => { drawCal(); if (document.getElementById('sohodniOut')) buildSohodni(); };   // перемалювати календар — з'являться значки віддання ◂
   document.head.appendChild(s);
 }
