@@ -551,6 +551,8 @@
   .vkaz-xref { color: #e8956a; font-weight: 600; }   /* «шукай деінде»: текст/зачала треба дістати з Мінеї/Загальної/Часослова/служби ін. святого */
   .vkaz-xref::before { content: "\1f50e\202f"; font-weight: 400; }   /* 🔎 — щоб не плутати з «не робимо» */
   .vkaz-text .vp { display: block; margin: 0 0 6px; }   /* абзац на кожну рубрику */
+  .vkaz-text .vkaz-hr { border: none; border-top: 1px dashed var(--feast-meta); margin: 16px 0; }
+  .vkaz-text .vkaz-abdiv { color: #e8956a; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; margin: 4px 0 8px; }
   .vkaz-text .vp:last-child { margin-bottom: 0; }
   .vkaz-plain-lbl { font-weight: 600; color: var(--gold-text); font-size: 14px; margin: 11px 0 2px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
@@ -2630,7 +2632,7 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=118';
+  s.src = 'data-vkazivky-2026.js?v=119';
   s.onload = () => { drawCal(); if (document.getElementById('sohodniOut')) buildSohodni(); };   // перемалювати календар — з'являться значки віддання ◂
   document.head.appendChild(s);
 }
@@ -2786,8 +2788,13 @@ function buildSohodni(){
       const nn = document.createElement('div'); nn.className = 'vkaz-notes'; nn.innerHTML = vkazChin(vkazEsc(vrec.notes));
       vbody.appendChild(nn);
     }
-    // \n у тексті секції → окремі абзаци (напр. інструкція часів Страсного тижня)
-    const bodyHTML = (txt) => txt.split('\n').filter(s => s.trim()).map(s => vkazBold(s)).join('');
+    // \n у тексті секції → окремі абзаци; «———» → лінія-роздільник; «§§…» → підпис-мітка (тимчасово для А/Б)
+    const bodyHTML = (txt) => txt.split('\n').filter(s => s.trim()).map(s => {
+      const t = s.trim();
+      if (/^—{3,}$/.test(t)) return '<hr class="vkaz-hr">';
+      if (t.startsWith('§§')) return '<div class="vkaz-abdiv">' + vkazEsc(t.slice(2).trim()) + '</div>';
+      return vkazBold(s);
+    }).join('');
     // одна секція служби → золотий акордеон (довгі) або підпис+текст (короткі), у заданий контейнер
     const renderSec = (sec, container) => {
       const label = SVC_LABEL[sec.svc] || sec.svc;
