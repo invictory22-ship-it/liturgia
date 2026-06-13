@@ -425,14 +425,14 @@
   .ref-feast .feast-meta { margin: 4px 0 0 18px; color: var(--feast-meta); font-size: 13px; }
   .ref-feast .feast-rank { opacity: .65; font-style: italic; }
   .ref-note { margin: 8px 0 4px; padding: 8px 12px; border-left: 3px solid var(--gold-line, #b0944a); background: rgba(176,148,74,.08); color: #cdbf9a; font-style: italic; font-size: 15px; line-height: 1.5; border-radius: 3px; }
-  /* Страсний тиждень: спільна рамка «як читаються Євангелія Пн–Ср на 3/6/9 часах» — видима, але можна згорнути */
-  .strasni-box { margin: 10px 0; border: 1px solid #8a5a3a; border-radius: 8px; background: rgba(170,90,50,.07); padding: 4px 0; }
-  .strasni-box > summary { cursor: pointer; list-style: none; padding: 8px 14px; color: #e8956a; font-weight: 600; font-size: 14px; }
+  /* Страсний тиждень: спільна згортаєма рамка «як читаються Євангелія Пн–Ср на 3/6/9 часах» — у кольорі зачал (блакитна) */
+  .strasni-box { margin: 10px 0; border: 1px solid rgba(90,130,190,.38); border-radius: 8px; background: rgba(90,130,190,.06); padding: 4px 0; }
+  .strasni-box > summary { cursor: pointer; list-style: none; padding: 8px 14px; color: #84b3ec; font-weight: 600; font-size: 13.5px; }
   .strasni-box > summary::-webkit-details-marker { display: none; }
-  .strasni-box > summary::before { content: var(--ic-open) " "; }
-  .strasni-box:not([open]) > summary::before { content: var(--ic-closed) " "; }
-  .strasni-box .strasni-cmt { margin: 0 14px 6px; padding: 6px 10px; border-left: 3px solid #8a5a3a; background: rgba(170,90,50,.10); color: #e0b59a; font-style: italic; font-size: 13.5px; line-height: 1.5; border-radius: 3px; }
-  .strasni-box .vkaz-text { padding: 0 14px 8px; }
+  .strasni-box > summary::before { content: var(--ic-closed) " "; }
+  .strasni-box[open] > summary::before { content: var(--ic-open) " "; }
+  .strasni-box .strasni-cmt { margin: 0 14px 6px; padding: 6px 10px; border-left: 3px solid rgba(90,130,190,.5); background: rgba(90,130,190,.10); color: #a8c4e8; font-style: italic; font-size: 13px; line-height: 1.5; border-radius: 3px; }
+  .strasni-box .vkaz-text { padding: 0 14px 8px; font-size: 14px; }
   /* кольори категорій свят — зі спільної палітри (:root угорі) */
   .ref-feast.cat-lord      .feast-name::before,
   .feast-legend .cat-lord      { color: var(--cat-lord); }       /* Господнє — червоний */
@@ -2637,7 +2637,7 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=111';
+  s.src = 'data-vkazivky-2026.js?v=112';
   s.onload = () => { drawCal(); if (document.getElementById('sohodniOut')) buildSohodni(); };   // перемалювати календар — з'являться значки віддання ◂
   document.head.appendChild(s);
 }
@@ -2793,14 +2793,15 @@ function buildSohodni(){
       (vrec.strasniGospelsRef && typeof VKAZIVKY_2026 !== 'undefined'
         ? (VKAZIVKY_2026.find(x => x.date === vrec.strasniGospelsRef) || {}).strasniGospels : null);
     if (strasniTxt){
-      const box = document.createElement('details'); box.className = 'strasni-box'; box.open = true;
+      const box = document.createElement('details'); box.className = 'strasni-box'; box.open = false;
       const sm = document.createElement('summary');
-      sm.textContent = 'Як читаються Євангелія на Страсному тижні (Пн–Ср)';
+      sm.textContent = 'Як читаються Євангелія на Страсному тижні (Пн–Ср) — докладно';
       box.appendChild(sm);
       const cmt = document.createElement('div'); cmt.className = 'strasni-cmt';
-      cmt.textContent = 'Четвероєвангеліє читається на 3-му, 6-му і 9-му часах у понеділок, вівторок і середу. Нижче — повний розклад на всі три дні (однаковий, незалежно від дня).';
+      cmt.textContent = 'Зачала на часи цього дня вже у блоці «Зачала» вище. Тут — повне пояснення статуту (для тих, хто хоче деталі).';
       box.appendChild(cmt);
-      const tx = document.createElement('div'); tx.className = 'vkaz-text'; tx.innerHTML = vkazBold(strasniTxt);
+      const tx = document.createElement('div'); tx.className = 'vkaz-text';
+      tx.innerHTML = strasniTxt.split('\n').filter(s => s.trim()).map(s => vkazBold(s)).join('');
       box.appendChild(tx);
       vbody.appendChild(box);
     }
