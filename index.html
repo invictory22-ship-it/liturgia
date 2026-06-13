@@ -420,8 +420,8 @@
   .ref-feast[open] > summary { border-bottom: 1px solid var(--feast-border); }
   /* рядок 1 — назва (стрілочка-маркер кольором за типом свята), рядок 2 — дата */
   .ref-feast .feast-name { color: var(--feast-name); font-size: 17px; }
-  .ref-feast .feast-name::before { content: var(--ic-closed) " "; color: var(--dash-mark); }
-  .ref-feast[open] .feast-name::before { content: var(--ic-open) " "; }
+  .ref-feast > summary .feast-name::before { content: var(--ic-closed) " "; color: var(--dash-mark); }
+  .ref-feast[open] > summary .feast-name::before { content: var(--ic-open) " "; }
   .ref-feast .feast-meta { margin: 4px 0 0 18px; color: var(--feast-meta); font-size: 13px; }
   .ref-feast .feast-rank { opacity: .65; font-style: italic; }
   .ref-note { margin: 8px 0 4px; padding: 8px 12px; border-left: 3px solid var(--gold-line, #b0944a); background: rgba(176,148,74,.08); color: #cdbf9a; font-style: italic; font-size: 15px; line-height: 1.5; border-radius: 3px; }
@@ -2611,7 +2611,7 @@ function ensureVkazivky(){
   if (typeof VKAZIVKY_2026 !== 'undefined' || _vkazInjected) return;
   _vkazInjected = true;
   const s = document.createElement('script');
-  s.src = 'data-vkazivky-2026.js?v=102';
+  s.src = 'data-vkazivky-2026.js?v=103';
   s.onload = () => { drawCal(); if (document.getElementById('sohodniOut')) buildSohodni(); };   // перемалювати календар — з'являться значки віддання ◂
   document.head.appendChild(s);
 }
@@ -2766,19 +2766,32 @@ function buildSohodni(){
       const nn = document.createElement('div'); nn.className = 'vkaz-notes'; nn.innerHTML = vkazChin(vkazEsc(vrec.notes));
       vbody.appendChild(nn);
     }
-    (vrec.sections || []).forEach(sec => {
+    // одна секція служби → золотий акордеон (довгі) або підпис+текст (короткі), у заданий контейнер
+    const renderSec = (sec, container) => {
       const label = SVC_LABEL[sec.svc] || sec.svc;
       const body = sec.text.replace(new RegExp('^(НА|На)\\s+' + sec.svc + '\\s*'), '');
       if (SVC_GOLD.has(sec.svc)){
         const sd = mkDet(label); sd.style.margin = '6px 0';
         const p = document.createElement('div'); p.className = 'vkaz-text'; p.innerHTML = vkazBold(body);
-        sd.appendChild(p); mkClose(sd, label); vbody.appendChild(sd);
+        sd.appendChild(p); mkClose(sd, label); container.appendChild(sd);
       } else {
         const l = document.createElement('div'); l.className = 'vkaz-plain-lbl'; l.textContent = label;
         const p = document.createElement('div'); p.className = 'vkaz-text'; p.innerHTML = vkazBold(body);
-        vbody.appendChild(l); vbody.appendChild(p);
+        container.appendChild(l); container.appendChild(p);
       }
-    });
+    };
+    const secs = vrec.sections || [];
+    if (vrec.variants && vrec.variants.length){
+      // дні з двома уставами служби (А/Б) — кожен варіант окремим акордеоном, у шапці підказка «про що варіант»
+      vrec.variants.forEach(v => {
+        const vw = mkDet(v.label); vw.style.margin = '8px 0';
+        const inner = document.createElement('div'); inner.style.padding = '2px 10px 4px';
+        for (let i = v.from; i <= v.to && i < secs.length; i++) renderSec(secs[i], inner);
+        vw.appendChild(inner); mkClose(vw, v.label); vbody.appendChild(vw);
+      });
+    } else {
+      secs.forEach(sec => renderSec(sec, vbody));
+    }
     // Пасха / особливий день: відсилка до повних служб — ПІД розрізаними секціями
     if (vrec.special){
       const bn = document.createElement('div'); bn.className = 'vkaz-banner';
